@@ -1,0 +1,111 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov flake8
+    
+    - name: Lint with flake8
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+    
+    - name: Test imports and basic functionality
+      run: |
+        python -c "import enhanced_bart_finetune; print('✅ Enhanced BART module imported successfully')"
+        python -c "import evaluate_fine_tuned_bart; print('✅ Evaluation module imported successfully')"
+        python -c "import google_reviews_labeler; print('✅ Labeler module imported successfully')"
+    
+    - name: Check code structure
+      run: |
+        python -c "
+        import ast
+        import sys
+        
+        files = ['enhanced_bart_finetune.py', 'evaluate_fine_tuned_bart.py', 'google_reviews_labeler.py']
+        for file in files:
+            try:
+                with open(file, 'r') as f:
+                    ast.parse(f.read())
+                print(f'✅ {file} syntax is valid')
+            except SyntaxError as e:
+                print(f'❌ {file} has syntax error: {e}')
+                sys.exit(1)
+        "
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install security tools
+      run: |
+        pip install safety bandit
+    
+    - name: Check for security vulnerabilities
+      run: |
+        safety check
+        bandit -r . -ll
+
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check documentation
+      run: |
+        # Check if README exists and has content
+        if [ -f "README.md" ] && [ -s "README.md" ]; then
+          echo "✅ README.md exists and has content"
+        else
+          echo "❌ README.md is missing or empty"
+          exit 1
+        fi
+        
+        # Check if required files exist
+        required_files=("requirements.txt" "LICENSE" ".gitignore")
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✅ $file exists"
+          else
+            echo "❌ $file is missing"
+            exit 1
+          fi
+        done
