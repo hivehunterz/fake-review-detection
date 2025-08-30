@@ -10,3 +10,5 @@ datasets>=2.14.0
 tokenizers>=0.13.0
 huggingface-hub>=0.16.0
 tqdm>=4.65.0
+streamlit>=1.49.0
+plotly>=5.0.0
