@@ -1,4 +1,3 @@
-"""
 🛡️ Smart Review Guardian - Web Interface
 Modern UI for the fake review detection system
 """
