@@ -1,4 +1,0 @@
-text,rating,business_name,category
-"Replace this with your review text - this is the main content that will be analyzed",5,Your Business Name,Your Category
-"Add your second review here - make sure to include the actual review content",3,Another Business,Another Category
-"Continue adding your reviews - each row should have the review text in the first column",1,Business 3,Category 3

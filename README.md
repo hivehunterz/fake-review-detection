@@ -46,15 +46,15 @@ python scripts/evaluation/universal_review_tester.py --input your_file.csv --tex
 - ✅ Automatic visualizations
 
 ### 🎯 Demo Dataset
-**File**: `demo_reviews.csv`
+**Location**: `demo/demo_reviews.csv`
 **Purpose**: 10 diverse review examples for instant testing
 **Content**: Genuine positive/negative, spam, fake enthusiastic, technical reviews
-**Usage**: Already tested - check `demo_results/` for complete analysis
+**Usage**: Ready for testing - see `demo/README.md` for instructions
 
 ### 📝 Test Your Own Data
-**Template File**: `input_template.csv`
+**Location**: `demo/` folder
 **Guide**: See `HOW_TO_TEST_YOUR_DATA.md` for detailed instructions
-**Usage**: Replace template content with your reviews and run analysis
+**Usage**: Put your CSV file in the `demo/` folder and run analysis
 **Supported Format**: CSV with text column (rating, business_name, category optional)
 
 ### 📊 Binary Evaluation System (76.9% Accuracy)
@@ -109,7 +109,7 @@ python scripts/training/train_all_models.py
 ### Predict Review Quality
 ```bash
 # Test with demo data
-python scripts/evaluation/universal_review_tester.py --input demo_reviews.csv --text_column text --output demo_results
+python scripts/evaluation/universal_review_tester.py --input demo/demo_reviews.csv --text_column text
 
 # Test with your own data
 python scripts/evaluation/universal_review_tester.py --input your_file.csv --text_column text --output your_results

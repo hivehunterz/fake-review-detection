@@ -350,12 +350,12 @@ class UniversalReviewTester:
         return df
     
     def _score_to_category(self, score: float) -> str:
-        """Convert risk score to category"""
-        if score < 0.25:
+        """Convert risk score to category with adjusted thresholds to reduce suspicious classifications"""
+        if score < 0.35:  # Increased from 0.25 to capture more genuine
             return 'genuine'
-        elif score < 0.5:
+        elif score < 0.55:  # Increased from 0.5 to capture more low_risk
             return 'low_risk'
-        elif score < 0.75:
+        elif score < 0.8:   # Increased from 0.75 to reduce medium_risk (suspicious)
             return 'medium_risk'
         else:
             return 'high_risk'

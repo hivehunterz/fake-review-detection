@@ -207,6 +207,72 @@ class AdvancedFusionModel:
             'feature_importance': importance if hasattr(self.model, 'feature_importances_') else None
         }
     
+    def predict_fusion_with_thresholds(self, p_bad, enhanced_prob, relevancy_score, is_relevant, 
+                                     bart_confidence, all_probabilities, 
+                                     genuine_threshold=0.25, spam_threshold=0.35, 
+                                     low_quality_threshold=0.15):
+        """
+        Predict fusion result with adjustable thresholds to reduce suspicious classifications
+        
+        Args:
+            genuine_threshold: Minimum confidence for genuine classification (lower = more genuine)
+            spam_threshold: Minimum confidence for spam classification (lower = more spam)
+            low_quality_threshold: Minimum confidence for low-quality classification
+        """
+        if self.model is None:
+            raise ValueError("Model not trained. Call train() first.")
+
+        # Engineer features for single prediction
+        features = self.engineer_features(
+            [p_bad], [enhanced_prob], [relevancy_score], [is_relevant],
+            [bart_confidence], [all_probabilities]
+        )
+        
+        # Scale features
+        features_scaled = self.scaler.transform(features)
+        
+        # Get probabilities
+        probabilities = self.model.predict_proba(features_scaled)[0]
+        
+        # Apply threshold-based logic
+        genuine_prob = probabilities[0]
+        suspicious_prob = probabilities[1]
+        low_quality_prob = probabilities[2]
+        spam_prob = probabilities[3]
+        
+        # Threshold-based classification
+        if spam_prob >= spam_threshold:
+            prediction_name = 'high-confidence-spam'
+            confidence = spam_prob
+        elif genuine_prob >= genuine_threshold:
+            prediction_name = 'genuine'
+            confidence = genuine_prob
+        elif low_quality_prob >= low_quality_threshold:
+            prediction_name = 'low-quality'
+            confidence = low_quality_prob
+        else:
+            # Only assign suspicious if nothing else meets threshold
+            prediction_name = 'suspicious'
+            confidence = suspicious_prob
+        
+        # Determine routing
+        routing_map = {
+            'genuine': 'automatic-approval',
+            'suspicious': 'requires-manual-verification', 
+            'low-quality': 'requires-manual-verification',
+            'high-confidence-spam': 'automatic-rejection'
+        }
+        
+        return {
+            'prediction': prediction_name,
+            'confidence': confidence,
+            'routing': routing_map[prediction_name],
+            'fusion_score': spam_prob,
+            'all_probabilities': probabilities.tolist(),
+            'model_type': self.model_type,
+            'threshold_adjusted': True
+        }
+
     def predict_fusion(self, p_bad, enhanced_prob, relevancy_score, is_relevant, 
                       bart_confidence, all_probabilities):
         """
@@ -249,6 +315,71 @@ class AdvancedFusionModel:
             'model_type': self.model_type
         }
     
+    def batch_predict_with_thresholds(self, p_bad_scores, enhanced_probs, relevancy_scores, 
+                                     is_relevant, bart_confidences, all_probabilities,
+                                     genuine_threshold=0.25, spam_threshold=0.35, 
+                                     low_quality_threshold=0.15):
+        """
+        Batch prediction with adjustable thresholds to reduce suspicious classifications
+        """
+        if self.model is None:
+            raise ValueError("Model not trained. Call train() first.")
+
+        # Engineer features
+        features = self.engineer_features(
+            p_bad_scores, enhanced_probs, relevancy_scores, is_relevant,
+            bart_confidences, all_probabilities
+        )
+        
+        # Scale features
+        features_scaled = self.scaler.transform(features)
+        
+        # Get probabilities
+        probabilities = self.model.predict_proba(features_scaled)
+        
+        # Convert to readable format with threshold adjustments
+        results = []
+        for i in range(len(probabilities)):
+            probs = probabilities[i]
+            
+            genuine_prob = probs[0]
+            suspicious_prob = probs[1]
+            low_quality_prob = probs[2]
+            spam_prob = probs[3]
+            
+            # Threshold-based classification
+            if spam_prob >= spam_threshold:
+                prediction_name = 'high-confidence-spam'
+                confidence = spam_prob
+            elif genuine_prob >= genuine_threshold:
+                prediction_name = 'genuine'
+                confidence = genuine_prob
+            elif low_quality_prob >= low_quality_threshold:
+                prediction_name = 'low-quality'
+                confidence = low_quality_prob
+            else:
+                prediction_name = 'suspicious'
+                confidence = suspicious_prob
+            
+            routing_map = {
+                'genuine': 'automatic-approval',
+                'suspicious': 'requires-manual-verification', 
+                'low-quality': 'requires-manual-verification',
+                'high-confidence-spam': 'automatic-rejection'
+            }
+            
+            results.append({
+                'prediction': prediction_name,
+                'confidence': confidence,
+                'routing': routing_map[prediction_name],
+                'fusion_score': spam_prob,
+                'all_probabilities': probs.tolist(),
+                'model_type': self.model_type,
+                'threshold_adjusted': True
+            })
+        
+        return results
+
     def batch_predict(self, p_bad_scores, enhanced_probs, relevancy_scores, 
                      is_relevant, bart_confidences, all_probabilities):
         """
