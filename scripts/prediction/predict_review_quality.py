@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 # Setup paths
-PROJECT_ROOT = Path(__file__).parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent  # Go up to main project directory
 CORE_PATH = PROJECT_ROOT / "core"
 DATA_PATH = PROJECT_ROOT / "data"
 MODELS_PATH = PROJECT_ROOT / "models"

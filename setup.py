@@ -9,8 +9,8 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="fake-review-detection",
     version="1.0.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Bo's Angels",
+    author_email="taneekhai222@gmail.com",
     description="Advanced Fake Review Detection System using BART and Multi-LLM Labeling",
     long_description=long_description,
     long_description_content_type="text/markdown",
