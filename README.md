@@ -96,10 +96,10 @@ Routing: automatic-approval
 
 ### Prediction Categories:
 
-- ✅ **Genuine** (30%): High-quality, authentic reviews
-- 🟡 **Suspicious** (47%): Requires manual verification  
-- ⚠️ **Low-Quality** (5%): Poor quality but not spam
-- 🚫 **High-Confidence-Spam** (18%): Automatic rejection
+- ✅ **Genuine** : High-quality, authentic reviews
+- 🟡 **Suspicious** : Requires manual verification  
+- ⚠️ **Low-Quality** : Poor quality but not spam
+- 🚫 **High-Confidence-Spam** : Automatic rejection
 
 ## 🔬 Technical Details
 
