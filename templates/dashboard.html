@@ -66,6 +66,70 @@
         </div>
     </div>
 
+    <!-- Model Performance Metrics (Moved from Insights) -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card border-primary metric-card">
+                <div class="card-body text-center">
+                    <div class="metric-icon text-primary mb-2">
+                        <i class="fas fa-bullseye fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">Precision</h6>
+                    <h3 class="text-primary">94.2%</h3>
+                    <small class="text-muted">ML Model Accuracy</small>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-primary" style="width: 94.2%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-success metric-card">
+                <div class="card-body text-center">
+                    <div class="metric-icon text-success mb-2">
+                        <i class="fas fa-search fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">Recall</h6>
+                    <h3 class="text-success">91.8%</h3>
+                    <small class="text-muted">Detection Rate</small>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-success" style="width: 91.8%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-info metric-card">
+                <div class="card-body text-center">
+                    <div class="metric-icon text-info mb-2">
+                        <i class="fas fa-balance-scale fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">F1-Score</h6>
+                    <h3 class="text-info">93.0%</h3>
+                    <small class="text-muted">Harmonic Mean</small>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-info" style="width: 93.0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card border-warning metric-card">
+                <div class="card-body text-center">
+                    <div class="metric-icon text-warning mb-2">
+                        <i class="fas fa-tachometer-alt fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">Throughput</h6>
+                    <h3 class="text-warning">2.4K</h3>
+                    <small class="text-muted">Reviews/Hour</small>
+                    <div class="progress mt-2" style="height: 4px;">
+                        <div class="progress-bar bg-warning" style="width: 80%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Charts Section -->
     <div class="row mb-4">
         <div class="col-md-6 mb-3">
@@ -126,9 +190,9 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <div class="d-grid">
-                                <a href="/insights" class="btn btn-info btn-lg">
-                                    <i class="fas fa-chart-line me-2"></i>
-                                    View Insights
+                                <a href="/policy" class="btn btn-warning btn-lg">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Policy Dashboard
                                 </a>
                             </div>
                         </div>
@@ -266,4 +330,23 @@ function refreshStats() {
         .catch(error => console.error('Error refreshing stats:', error));
 }
 </script>
+
+<style>
+.metric-card {
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.metric-icon {
+    transition: all 0.3s ease;
+}
+
+.metric-card:hover .metric-icon {
+    transform: scale(1.1);
+}
+</style>
 {% endblock %}
