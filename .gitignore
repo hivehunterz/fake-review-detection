@@ -92,3 +92,8 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Streamlit
+.streamlit/secrets.toml
+*.streamlit/
+__streamlit__/
