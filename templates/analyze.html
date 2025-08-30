@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}Analyze Review - Smart Review Guardian{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-search me-2"></i>Analyze Single Review</h2>
+            <p class="text-muted">Enter a review to get instant AI-powered quality assessment</p>
+        </div>
+    </div>
+
+    <!-- Input Panel -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-edit me-2"></i>
+                        Review Input
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="analyzeForm">
+                        <div class="mb-3">
+                            <label for="reviewText" class="form-label">Review Text *</label>
+                            <textarea 
+                                class="form-control" 
+                                id="reviewText" 
+                                rows="4" 
+                                placeholder="Enter or paste the review text here..."
+                                required></textarea>
+                            <div class="form-text">
+                                <span id="charCount">0</span> characters
+                            </div>
+                        </div>
+                        
+                        <!-- Optional Metadata -->
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="stars" class="form-label">Star Rating</label>
+                                <select class="form-select" id="stars">
+                                    <option value="">Select rating</option>
+                                    <option value="1">⭐ 1 Star</option>
+                                    <option value="2">⭐⭐ 2 Stars</option>
+                                    <option value="3">⭐⭐⭐ 3 Stars</option>
+                                    <option value="4">⭐⭐⭐⭐ 4 Stars</option>
+                                    <option value="5">⭐⭐⭐⭐⭐ 5 Stars</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="businessName" class="form-label">Business Name</label>
+                                <input type="text" class="form-control" id="businessName" placeholder="e.g., Mario's Restaurant">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="businessCategory" class="form-label">Business Category</label>
+                                <input type="text" class="form-control" id="businessCategory" placeholder="e.g., Restaurant">
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-outline-secondary" id="clearBtn">
+                                <i class="fas fa-trash me-1"></i>Clear
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="analyzeBtn">
+                                <i class="fas fa-cog me-1"></i>Analyze Review
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Panel -->
+    <div class="row" id="resultsPanel" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Analysis Results
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Main Result -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="text-center">
+                                <div class="prediction-badge mb-3" id="mainPrediction">
+                                    <div class="prediction-icon" id="predictionIcon">
+                                        <i class="fas fa-question-circle"></i>
+                                    </div>
+                                    <div class="prediction-text" id="predictionText">Analyzing...</div>
+                                </div>
+                                <div class="progress mb-2" style="height: 10px;">
+                                    <div class="progress-bar" id="confidenceBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted">Confidence: <span id="confidenceText">0%</span></small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="action-card" id="actionCard">
+                                <h6 class="mb-2">Suggested Action</h6>
+                                <div class="action-badge" id="actionBadge">
+                                    <i class="fas fa-hourglass-half me-1"></i>
+                                    Processing...
+                                </div>
+                                <p class="mt-2 mb-0 small text-muted" id="actionDescription">
+                                    Analyzing review content...
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Scores -->
+                    <div class="row mb-4">
+                        <div class="col-md-4 mb-3">
+                            <div class="score-card">
+                                <h6>BART Classification</h6>
+                                <div class="score-value" id="bartScore">-</div>
+                                <div class="score-label" id="bartPrediction">-</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="score-card">
+                                <h6>Risk Score (P_BAD)</h6>
+                                <div class="score-value" id="riskScore">-</div>
+                                <div class="score-label">Likelihood of being problematic</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="score-card">
+                                <h6>Metadata Anomaly</h6>
+                                <div class="score-value" id="anomalyScore">-</div>
+                                <div class="score-label">Behavioral pattern analysis</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Policy Violations -->
+                    <div class="row mb-4" id="violationsSection" style="display: none;">
+                        <div class="col-12">
+                            <h6><i class="fas fa-exclamation-triangle me-2"></i>Policy Violations Detected</h6>
+                            <div id="violationsList" class="d-flex flex-wrap gap-2">
+                                <!-- Violation badges will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Class Probabilities -->
+                    <div class="row">
+                        <div class="col-12">
+                            <h6><i class="fas fa-chart-pie me-2"></i>Classification Breakdown</h6>
+                            <div class="probability-bars" id="probabilityBars">
+                                <!-- Probability bars will be inserted here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Analyzing review through ML pipeline...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('analyzeForm');
+    const reviewText = document.getElementById('reviewText');
+    const charCount = document.getElementById('charCount');
+    const clearBtn = document.getElementById('clearBtn');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const resultsPanel = document.getElementById('resultsPanel');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    // Character counter
+    reviewText.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+    });
+
+    // Clear form
+    clearBtn.addEventListener('click', function() {
+        form.reset();
+        charCount.textContent = '0';
+        resultsPanel.style.display = 'none';
+    });
+
+    // Form submission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        analyzeReview();
+    });
+
+    function analyzeReview() {
+        const text = reviewText.value.trim();
+        if (!text) {
+            alert('Please enter review text');
+            return;
+        }
+
+        // Show loading
+        loadingOverlay.style.display = 'flex';
+        analyzeBtn.disabled = true;
+
+        // Prepare data
+        const data = {
+            text: text,
+            metadata: {
+                stars: document.getElementById('stars').value || null,
+                business_name: document.getElementById('businessName').value || null,
+                business_category: document.getElementById('businessCategory').value || null
+            }
+        };
+
+        // Send request
+        fetch('/api/predict', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Analysis failed. Please try again.');
+        })
+        .finally(() => {
+            loadingOverlay.style.display = 'none';
+            analyzeBtn.disabled = false;
+        });
+    }
+
+    function displayResults(data) {
+        // Show results panel
+        resultsPanel.style.display = 'block';
+
+        // Main prediction
+        updateMainPrediction(data);
+        updateActionCard(data);
+        updateDetailedScores(data);
+        updatePolicyViolations(data);
+        updateProbabilityBars(data);
+
+        // Scroll to results
+        resultsPanel.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function updateMainPrediction(data) {
+        const prediction = data.final_prediction;
+        const confidence = Math.round(data.final_confidence * 100);
+        
+        const predictionIcon = document.getElementById('predictionIcon');
+        const predictionText = document.getElementById('predictionText');
+        const confidenceBar = document.getElementById('confidenceBar');
+        const confidenceText = document.getElementById('confidenceText');
+
+        // Update prediction display
+        const predictionConfig = {
+            'genuine': {
+                icon: 'fas fa-check-circle',
+                text: 'Genuine Review',
+                color: 'success',
+                bgColor: '#d4edda'
+            },
+            'suspicious': {
+                icon: 'fas fa-question-circle',
+                text: 'Suspicious Content',
+                color: 'warning',
+                bgColor: '#fff3cd'
+            },
+            'low-quality': {
+                icon: 'fas fa-exclamation-triangle',
+                text: 'Low Quality',
+                color: 'warning',
+                bgColor: '#fff3cd'
+            },
+            'high-confidence-spam': {
+                icon: 'fas fa-ban',
+                text: 'High Confidence Spam',
+                color: 'danger',
+                bgColor: '#f8d7da'
+            }
+        };
+
+        const config = predictionConfig[prediction] || predictionConfig['suspicious'];
+        predictionIcon.className = config.icon;
+        predictionText.textContent = config.text;
+        
+        // Update confidence bar
+        confidenceBar.className = `progress-bar bg-${config.color}`;
+        confidenceBar.style.width = `${confidence}%`;
+        confidenceText.textContent = `${confidence}%`;
+
+        // Update prediction badge styling
+        const mainPrediction = document.getElementById('mainPrediction');
+        mainPrediction.style.backgroundColor = config.bgColor;
+        mainPrediction.className = `prediction-badge mb-3 border border-${config.color}`;
+    }
+
+    function updateActionCard(data) {
+        const routing = data.routing_decision;
+        const actionBadge = document.getElementById('actionBadge');
+        const actionDescription = document.getElementById('actionDescription');
+
+        const actionConfig = {
+            'automatic-approval': {
+                icon: 'fas fa-check',
+                text: 'Auto-Approve',
+                color: 'success',
+                description: 'This review can be automatically approved for publication.'
+            },
+            'requires-manual-verification': {
+                icon: 'fas fa-eye',
+                text: 'Manual Review',
+                color: 'warning',
+                description: 'This review requires human verification before publication.'
+            },
+            'automatic-rejection': {
+                icon: 'fas fa-times',
+                text: 'Auto-Reject',
+                color: 'danger',
+                description: 'This review should be automatically rejected.'
+            }
+        };
+
+        const config = actionConfig[routing] || actionConfig['requires-manual-verification'];
+        actionBadge.innerHTML = `<i class="${config.icon} me-1"></i>${config.text}`;
+        actionBadge.className = `action-badge badge bg-${config.color}`;
+        actionDescription.textContent = config.description;
+    }
+
+    function updateDetailedScores(data) {
+        // BART Score
+        document.getElementById('bartScore').textContent = Math.round(data.bart_confidence * 100) + '%';
+        document.getElementById('bartPrediction').textContent = data.bart_prediction.replace('_', ' ');
+
+        // Risk Score
+        const riskScore = Math.round(data.p_bad_score * 100);
+        document.getElementById('riskScore').textContent = riskScore + '%';
+
+        // Anomaly Score
+        const anomalyScore = Math.round(data.metadata_anomaly_score * 100);
+        document.getElementById('anomalyScore').textContent = anomalyScore + '%';
+    }
+
+    function updatePolicyViolations(data) {
+        const violationsSection = document.getElementById('violationsSection');
+        const violationsList = document.getElementById('violationsList');
+        
+        // Clear existing violations
+        violationsList.innerHTML = '';
+
+        // Check for violations based on prediction
+        const violations = [];
+        if (data.bart_prediction === 'advertisement') {
+            violations.push({ type: 'Advertisement', icon: 'fas fa-ad', color: 'warning' });
+        }
+        if (data.bart_prediction === 'spam') {
+            violations.push({ type: 'Spam Content', icon: 'fas fa-ban', color: 'danger' });
+        }
+        if (data.bart_prediction === 'irrelevant') {
+            violations.push({ type: 'Irrelevant', icon: 'fas fa-times-circle', color: 'secondary' });
+        }
+        if (data.bart_prediction === 'inappropriate') {
+            violations.push({ type: 'Inappropriate', icon: 'fas fa-exclamation-triangle', color: 'danger' });
+        }
+        if (data.p_bad_score > 0.7) {
+            violations.push({ type: 'High Risk Score', icon: 'fas fa-exclamation', color: 'warning' });
+        }
+
+        if (violations.length > 0) {
+            violations.forEach(violation => {
+                const badge = document.createElement('span');
+                badge.className = `badge bg-${violation.color} me-2`;
+                badge.innerHTML = `<i class="${violation.icon} me-1"></i>${violation.type}`;
+                violationsList.appendChild(badge);
+            });
+            violationsSection.style.display = 'block';
+        } else {
+            violationsSection.style.display = 'none';
+        }
+    }
+
+    function updateProbabilityBars(data) {
+        const probabilityBars = document.getElementById('probabilityBars');
+        probabilityBars.innerHTML = '';
+
+        const probabilities = data.class_probabilities || {};
+        const classColors = {
+            'genuine_positive': 'success',
+            'genuine_negative': 'info',
+            'spam': 'danger',
+            'advertisement': 'warning',
+            'irrelevant': 'secondary',
+            'fake_rant': 'danger',
+            'inappropriate': 'dark'
+        };
+
+        Object.entries(probabilities).forEach(([className, probability]) => {
+            const percentage = Math.round(probability * 100);
+            const color = classColors[className] || 'secondary';
+            const displayName = className.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+            const barContainer = document.createElement('div');
+            barContainer.className = 'probability-bar mb-2';
+            barContainer.innerHTML = `
+                <div class="d-flex justify-content-between mb-1">
+                    <small>${displayName}</small>
+                    <small>${percentage}%</small>
+                </div>
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar bg-${color}" style="width: ${percentage}%"></div>
+                </div>
+            `;
+            probabilityBars.appendChild(barContainer);
+        });
+    }
+});
+</script>
+{% endblock %}

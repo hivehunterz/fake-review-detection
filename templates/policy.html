@@ -1,0 +1,678 @@
+{% extends "base.html" %}
+
+{% block title %}Policy Dashboard - Smart Review Guardian{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-exclamation-triangle me-2"></i>Policy Violation Dashboard</h2>
+            <p class="text-muted">Monitor and analyze policy violations across review categories</p>
+        </div>
+    </div>
+
+    <!-- Filter Controls -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-end">
+                        <div class="col-md-3 mb-2">
+                            <label for="policyFilter" class="form-label">Policy Type</label>
+                            <select class="form-select" id="policyFilter">
+                                <option value="all">All Violations</option>
+                                <option value="spam">Spam Content</option>
+                                <option value="advertisement">Advertisement</option>
+                                <option value="irrelevant">Irrelevant Content</option>
+                                <option value="inappropriate">Inappropriate Content</option>
+                                <option value="fake_rant">Fake Rants</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="timeRange" class="form-label">Time Range</label>
+                            <select class="form-select" id="timeRange">
+                                <option value="24h">Last 24 Hours</option>
+                                <option value="7d">Last 7 Days</option>
+                                <option value="30d" selected>Last 30 Days</option>
+                                <option value="90d">Last 90 Days</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <label for="confidenceFilter" class="form-label">Min Confidence</label>
+                            <div class="input-group">
+                                <input type="range" class="form-range" id="confidenceFilter" min="0" max="100" value="50">
+                                <span class="ms-2" id="confidenceValue">50%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <button class="btn btn-primary w-100" id="applyFilters">
+                                <i class="fas fa-filter me-1"></i>Apply Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Violation Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-2 mb-3">
+            <div class="card border-danger violation-card" data-type="spam">
+                <div class="card-body text-center">
+                    <div class="violation-icon text-danger mb-2">
+                        <i class="fas fa-ban fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">Spam</h6>
+                    <h4 class="text-danger" id="spamCount">0</h4>
+                    <small class="text-muted">Detected</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card border-warning violation-card" data-type="advertisement">
+                <div class="card-body text-center">
+                    <div class="violation-icon text-warning mb-2">
+                        <i class="fas fa-ad fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">Ads</h6>
+                    <h4 class="text-warning" id="adCount">0</h4>
+                    <small class="text-muted">Detected</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card border-secondary violation-card" data-type="irrelevant">
+                <div class="card-body text-center">
+                    <div class="violation-icon text-secondary mb-2">
+                        <i class="fas fa-times-circle fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">Irrelevant</h6>
+                    <h4 class="text-secondary" id="irrelevantCount">0</h4>
+                    <small class="text-muted">Detected</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card border-dark violation-card" data-type="inappropriate">
+                <div class="card-body text-center">
+                    <div class="violation-icon text-dark mb-2">
+                        <i class="fas fa-exclamation-triangle fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">Inappropriate</h6>
+                    <h4 class="text-dark" id="inappropriateCount">0</h4>
+                    <small class="text-muted">Detected</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card border-danger violation-card" data-type="fake_rant">
+                <div class="card-body text-center">
+                    <div class="violation-icon text-danger mb-2">
+                        <i class="fas fa-angry fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">Fake Rants</h6>
+                    <h4 class="text-danger" id="fakeRantCount">0</h4>
+                    <small class="text-muted">Detected</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 mb-3">
+            <div class="card border-success violation-card" data-type="genuine">
+                <div class="card-body text-center">
+                    <div class="violation-icon text-success mb-2">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                    <h6 class="card-title">Genuine</h6>
+                    <h4 class="text-success" id="genuineCountPolicy">0</h4>
+                    <small class="text-muted">Reviews</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Violation Type Distribution
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="violationDistributionChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Violations Over Time
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="violationTimelineChart" width="400" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Risk Heatmap -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-fire me-2"></i>
+                        Risk Level Heatmap
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="risk-category high-risk">
+                                <h6>High Risk (>80%)</h6>
+                                <div class="risk-count" id="highRiskCount">0</div>
+                                <small>Automatic rejection recommended</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="risk-category medium-risk">
+                                <h6>Medium Risk (60-80%)</h6>
+                                <div class="risk-count" id="mediumRiskCount">0</div>
+                                <small>Manual review required</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="risk-category low-risk">
+                                <h6>Low Risk (40-60%)</h6>
+                                <div class="risk-count" id="lowRiskCount">0</div>
+                                <small>Monitor closely</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="risk-category minimal-risk">
+                                <h6>Minimal Risk (<40%)</h6>
+                                <div class="risk-count" id="minimalRiskCount">0</div>
+                                <small>Likely genuine</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Violations Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Recent Violations
+                    </h5>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary active" data-filter="all">All</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-filter="high">High Risk</button>
+                        <button type="button" class="btn btn-sm btn-outline-warning" data-filter="medium">Medium Risk</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="violationsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Review Text</th>
+                                    <th>Violation Type</th>
+                                    <th>Risk Score</th>
+                                    <th>Confidence</th>
+                                    <th>Detected</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="violationsTableBody">
+                                <!-- Sample data for demo -->
+                                <tr>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 300px;">
+                                            Check out our amazing deals at www.example.com! Best prices guaranteed!
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-warning">Advertisement</span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 60px; height: 8px;">
+                                                <div class="progress-bar bg-danger" style="width: 85%"></div>
+                                            </div>
+                                            <small>85%</small>
+                                        </div>
+                                    </td>
+                                    <td>92%</td>
+                                    <td><small class="text-muted">2 min ago</small></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="showViolationDetail(0)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 300px;">
+                                            This place is absolutely terrible! Worst experience ever! Never going back!
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-danger">Fake Rant</span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 60px; height: 8px;">
+                                                <div class="progress-bar bg-warning" style="width: 72%"></div>
+                                            </div>
+                                            <small>72%</small>
+                                        </div>
+                                    </td>
+                                    <td>78%</td>
+                                    <td><small class="text-muted">5 min ago</small></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="showViolationDetail(1)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="text-truncate" style="max-width: 300px;">
+                                            My cat loves this vet clinic. The staff is very friendly and professional.
+                                        </div>
+                                    </td>
+                                    <td><span class="badge bg-secondary">Irrelevant</span></td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress me-2" style="width: 60px; height: 8px;">
+                                                <div class="progress-bar bg-info" style="width: 45%"></div>
+                                            </div>
+                                            <small>45%</small>
+                                        </div>
+                                    </td>
+                                    <td>68%</td>
+                                    <td><small class="text-muted">8 min ago</small></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="showViolationDetail(2)">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.violation-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.violation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.violation-card.selected {
+    border-width: 2px;
+    box-shadow: 0 0.5rem 1rem rgba(0, 123, 255, 0.3);
+}
+
+.violation-icon {
+    transition: all 0.3s ease;
+}
+
+.violation-card:hover .violation-icon {
+    transform: scale(1.1);
+}
+
+.risk-category {
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    height: 100%;
+}
+
+.high-risk {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+    color: white;
+}
+
+.medium-risk {
+    background: linear-gradient(135deg, #feca57, #ff9ff3);
+    color: white;
+}
+
+.low-risk {
+    background: linear-gradient(135deg, #48cae4, #0096c7);
+    color: white;
+}
+
+.minimal-risk {
+    background: linear-gradient(135deg, #51cf66, #40c057);
+    color: white;
+}
+
+.risk-count {
+    font-size: 2rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializePolicyDashboard();
+    setupFilterControls();
+    loadViolationData();
+});
+
+function initializePolicyDashboard() {
+    // Initialize charts
+    initializeViolationDistributionChart();
+    initializeViolationTimelineChart();
+    
+    // Setup violation card interactions
+    setupViolationCardInteractions();
+    
+    // Setup confidence slider
+    const confidenceFilter = document.getElementById('confidenceFilter');
+    const confidenceValue = document.getElementById('confidenceValue');
+    
+    confidenceFilter.addEventListener('input', function() {
+        confidenceValue.textContent = this.value + '%';
+    });
+}
+
+function setupFilterControls() {
+    const applyFilters = document.getElementById('applyFilters');
+    applyFilters.addEventListener('click', function() {
+        applyPolicyFilters();
+    });
+    
+    // Filter buttons for table
+    const filterButtons = document.querySelectorAll('[data-filter]');
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            filterViolationsTable(this.dataset.filter);
+        });
+    });
+}
+
+function setupViolationCardInteractions() {
+    const violationCards = document.querySelectorAll('.violation-card');
+    violationCards.forEach(card => {
+        card.addEventListener('click', function() {
+            // Remove selected class from all cards
+            violationCards.forEach(c => c.classList.remove('selected'));
+            // Add selected class to clicked card
+            this.classList.add('selected');
+            
+            // Filter data based on selected violation type
+            const violationType = this.dataset.type;
+            filterByViolationType(violationType);
+        });
+    });
+}
+
+function loadViolationData() {
+    // Simulate loading violation data
+    // In a real app, this would fetch from the API
+    const mockData = {
+        spam: 15,
+        advertisement: 23,
+        irrelevant: 8,
+        inappropriate: 3,
+        fake_rant: 7,
+        genuine: 144
+    };
+    
+    updateViolationCounts(mockData);
+    updateRiskCounts();
+}
+
+function updateViolationCounts(data) {
+    document.getElementById('spamCount').textContent = data.spam;
+    document.getElementById('adCount').textContent = data.advertisement;
+    document.getElementById('irrelevantCount').textContent = data.irrelevant;
+    document.getElementById('inappropriateCount').textContent = data.inappropriate;
+    document.getElementById('fakeRantCount').textContent = data.fake_rant;
+    document.getElementById('genuineCountPolicy').textContent = data.genuine;
+}
+
+function updateRiskCounts() {
+    // Mock risk distribution
+    document.getElementById('highRiskCount').textContent = '12';
+    document.getElementById('mediumRiskCount').textContent = '28';
+    document.getElementById('lowRiskCount').textContent = '45';
+    document.getElementById('minimalRiskCount').textContent = '115';
+}
+
+function initializeViolationDistributionChart() {
+    const ctx = document.getElementById('violationDistributionChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Genuine', 'Advertisement', 'Spam', 'Irrelevant', 'Fake Rant', 'Inappropriate'],
+            datasets: [{
+                data: [144, 23, 15, 8, 7, 3],
+                backgroundColor: [
+                    '#28a745',
+                    '#ffc107', 
+                    '#dc3545',
+                    '#6c757d',
+                    '#fd7e14',
+                    '#343a40'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function initializeViolationTimelineChart() {
+    const ctx = document.getElementById('violationTimelineChart').getContext('2d');
+    
+    // Generate mock timeline data for the last 7 days
+    const days = [];
+    const spamData = [];
+    const adData = [];
+    const otherData = [];
+    
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        days.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+        spamData.push(Math.floor(Math.random() * 10) + 1);
+        adData.push(Math.floor(Math.random() * 15) + 2);
+        otherData.push(Math.floor(Math.random() * 8) + 1);
+    }
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: days,
+            datasets: [
+                {
+                    label: 'Spam',
+                    data: spamData,
+                    borderColor: '#dc3545',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Advertisement', 
+                    data: adData,
+                    borderColor: '#ffc107',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                },
+                {
+                    label: 'Other Violations',
+                    data: otherData,
+                    borderColor: '#6c757d',
+                    backgroundColor: 'rgba(108, 117, 125, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function applyPolicyFilters() {
+    const policyType = document.getElementById('policyFilter').value;
+    const timeRange = document.getElementById('timeRange').value;
+    const confidence = document.getElementById('confidenceFilter').value;
+    
+    console.log('Applying filters:', { policyType, timeRange, confidence });
+    
+    // In a real app, this would make an API call with the filters
+    // For now, we'll just show a notification
+    ReviewGuardian.utils.showNotification(
+        `Filters applied: ${policyType} violations in ${timeRange} with ${confidence}% min confidence`,
+        'info'
+    );
+    
+    // Refresh the charts and data with filtered results
+    refreshDashboardData();
+}
+
+function filterByViolationType(type) {
+    console.log('Filtering by violation type:', type);
+    
+    // Update charts based on selected type
+    // This would typically filter the data and update visualizations
+    ReviewGuardian.utils.showNotification(
+        `Showing data for: ${type.replace('_', ' ')}`,
+        'info'
+    );
+}
+
+function filterViolationsTable(filter) {
+    const tableBody = document.getElementById('violationsTableBody');
+    const rows = tableBody.querySelectorAll('tr');
+    
+    rows.forEach(row => {
+        const riskScore = parseInt(row.querySelector('.progress-bar').style.width);
+        let show = true;
+        
+        switch (filter) {
+            case 'high':
+                show = riskScore >= 80;
+                break;
+            case 'medium':
+                show = riskScore >= 60 && riskScore < 80;
+                break;
+            case 'low':
+                show = riskScore < 60;
+                break;
+            default:
+                show = true;
+        }
+        
+        row.style.display = show ? '' : 'none';
+    });
+}
+
+function refreshDashboardData() {
+    // Simulate data refresh
+    setTimeout(() => {
+        loadViolationData();
+        ReviewGuardian.utils.showNotification('Dashboard data refreshed', 'success', 2000);
+    }, 1000);
+}
+
+function showViolationDetail(index) {
+    // Mock violation details
+    const violations = [
+        {
+            text: "Check out our amazing deals at www.example.com! Best prices guaranteed!",
+            type: "Advertisement",
+            confidence: 92,
+            risk: 85,
+            reason: "Contains promotional URL and marketing language"
+        },
+        {
+            text: "This place is absolutely terrible! Worst experience ever! Never going back!",
+            type: "Fake Rant",
+            confidence: 78,
+            risk: 72,
+            reason: "Excessive negative sentiment with no specific details"
+        },
+        {
+            text: "My cat loves this vet clinic. The staff is very friendly and professional.",
+            type: "Irrelevant",
+            confidence: 68,
+            risk: 45,
+            reason: "Review context doesn't match business category"
+        }
+    ];
+    
+    const violation = violations[index];
+    if (violation) {
+        alert(`Violation Details:\n\nText: ${violation.text}\n\nType: ${violation.type}\nConfidence: ${violation.confidence}%\nRisk Score: ${violation.risk}%\n\nReason: ${violation.reason}`);
+    }
+}
+</script>
+{% endblock %}
