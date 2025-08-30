@@ -71,7 +71,7 @@ TIME_WINDOWS = {
 BART_CONFIG = {
     'model_path': '../stage_1_bart_finetuning',  # Look for trained models here
     'enable_integration': True,
-    'confidence_threshold': 0.7,  # Minimum confidence for high-quality features
+    # Confidence threshold removed for batch analysis as requested
     'risk_threshold': 0.5,  # Maximum risk for high-quality content
     'class_weights': {
         'genuine_positive': 1.0,
