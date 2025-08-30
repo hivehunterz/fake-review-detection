@@ -61,27 +61,49 @@ class SmartReviewGuardian:
             from predict_review_quality import ReviewQualityPredictor
             self.predictor = ReviewQualityPredictor()
             
-            # Try to load models
+            # Try to load models - this will now gracefully handle failures
             if self.predictor.load_models():
                 logger.info("✅ ML models loaded successfully")
                 return True
             else:
-                logger.warning("⚠️ Could not load all models, using demo mode")
+                logger.warning("⚠️ Could not load all models, but BART fallback is available")
+                # Even if complex models fail, we can still use BART with fallback
+                self.predictor = None  # Will use demo mode with better fallback
                 return False
         except Exception as e:
             logger.error(f"❌ Failed to initialize predictor: {e}")
+            self.predictor = None  # Will use demo mode
             return False
     
     def predict_single_review(self, text: str, metadata: Optional[Dict] = None) -> Dict:
         """Predict quality of a single review"""
         if not self.predictor:
-            # Demo mode - return mock results
-            return self._generate_demo_result(text)
+            # Try to use BART classifier directly as fallback
+            try:
+                import sys
+                sys.path.append(str(PROJECT_ROOT / "core" / "stage1_bart"))
+                from enhanced_bart_review_classifier import BARTReviewClassifier
+                
+                bart_classifier = BARTReviewClassifier(model_path=None, use_gpu=False)
+                bart_result = bart_classifier.predict_single(text)
+                
+                # Convert BART result to app format
+                result = self._convert_bart_result_to_app_format(bart_result, text, metadata)
+                result['demo_mode'] = False
+                result['fallback_mode'] = True
+                
+                self._update_stats(result['final_prediction'])
+                return result
+                
+            except Exception as e:
+                logger.warning(f"BART fallback failed: {e}, using demo mode")
+                return self._generate_demo_result(text)
         
         try:
             result = self.predictor.predict_single_review(text, metadata)
             # Add additional fields for UI display
             result['demo_mode'] = False
+            result['fallback_mode'] = False
             
             # Map routing decisions to user-friendly descriptions
             routing_descriptions = {
@@ -135,13 +157,33 @@ class SmartReviewGuardian:
             'errors': 0
         }
         
+        # Check if we have a working predictor or need to use BART fallback
+        use_bart_fallback = not self.predictor
+        bart_classifier = None
+        
+        if use_bart_fallback:
+            try:
+                import sys
+                sys.path.append(str(PROJECT_ROOT / "core" / "stage1_bart"))
+                from enhanced_bart_review_classifier import BARTReviewClassifier
+                bart_classifier = BARTReviewClassifier(model_path=None, use_gpu=False)
+                logger.info("Using BART classifier with fallback for batch processing")
+            except Exception as e:
+                logger.warning(f"BART fallback setup failed: {e}, using demo mode")
+        
         for i, review in enumerate(reviews_data):
             try:
                 text = review.get('text', '')
                 metadata = {k: v for k, v in review.items() if k != 'text'}
                 
-                # Predict single review
-                result = self.predict_single_review(text, metadata)
+                # Predict single review using appropriate method
+                if bart_classifier:
+                    bart_result = bart_classifier.predict_single(text)
+                    result = self._convert_bart_result_to_app_format(bart_result, text, metadata)
+                    result['demo_mode'] = False
+                    result['fallback_mode'] = True
+                else:
+                    result = self.predict_single_review(text, metadata)
                 
                 # Add batch-specific metadata
                 result['batch_index'] = i
@@ -196,7 +238,8 @@ class SmartReviewGuardian:
         return {
             'results': results,
             'summary': batch_stats,
-            'detailed_stats': self._generate_detailed_batch_stats(results)
+            'detailed_stats': self._generate_detailed_batch_stats(results),
+            'fallback_mode': use_bart_fallback
         }
     
     def _generate_demo_result(self, text: str, error: str = None) -> Dict:
@@ -321,6 +364,75 @@ class SmartReviewGuardian:
             result['error'] = error
             
         self._update_stats(prediction)
+        return result
+    
+    def _convert_bart_result_to_app_format(self, bart_result: Dict, text: str, metadata: Optional[Dict] = None) -> Dict:
+        """Convert BART classifier result to app format"""
+        bart_prediction = bart_result['prediction']
+        bart_confidence = bart_result['confidence']
+        p_bad_score = bart_result['p_bad']
+        
+        # Map BART predictions to final predictions
+        final_prediction_map = {
+            'genuine_positive': 'genuine',
+            'genuine_negative': 'genuine',
+            'spam': 'high-confidence-spam',
+            'advertisement': 'suspicious',
+            'irrelevant': 'low-quality',
+            'fake_rant': 'suspicious',
+            'inappropriate': 'high-confidence-spam'
+        }
+        
+        final_prediction = final_prediction_map.get(bart_prediction, 'suspicious')
+        
+        # Generate routing decision based on prediction
+        routing_map = {
+            'genuine': 'automatic-approval',
+            'suspicious': 'requires-manual-verification',
+            'low-quality': 'requires-manual-verification',
+            'high-confidence-spam': 'automatic-rejection'
+        }
+        
+        routing_decision = routing_map[final_prediction]
+        
+        # Generate routing description
+        routing_descriptions = {
+            'automatic-approval': 'This review can be automatically approved for publication.',
+            'requires-manual-verification': 'This review requires human verification before publication.',
+            'automatic-rejection': 'This review should be automatically rejected.'
+        }
+        
+        result = {
+            'text': text,
+            'bart_prediction': bart_prediction,
+            'bart_confidence': bart_confidence,
+            'p_bad_score': p_bad_score,
+            'metadata_anomaly_score': 0.3,  # Default value
+            'final_prediction': final_prediction,
+            'final_confidence': bart_confidence,
+            'fusion_score': (p_bad_score + 0.3) / 2,  # Simple fusion
+            'routing_decision': routing_decision,
+            'routing_description': routing_descriptions[routing_decision],
+            'class_probabilities': bart_result['class_probabilities'],
+            'stage_analysis': {
+                'stage1_bart': {
+                    'prediction': bart_prediction,
+                    'confidence': bart_confidence,
+                    'description': f'BART model classification ({bart_result["model_type"]})'
+                },
+                'stage2_metadata': {
+                    'anomaly_score': 0.3,
+                    'description': 'Simplified metadata analysis (fallback mode)'
+                },
+                'stage3_fusion': {
+                    'final_prediction': final_prediction,
+                    'final_confidence': bart_confidence,
+                    'fusion_score': (p_bad_score + 0.3) / 2,
+                    'description': 'Simplified fusion combining BART and basic heuristics'
+                }
+            }
+        }
+        
         return result
     
     def _update_stats(self, prediction: str):
