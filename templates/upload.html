@@ -1,0 +1,632 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Reviews - Smart Review Guardian{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2><i class="fas fa-upload me-2"></i>Upload & Batch Analysis</h2>
+            <p class="text-muted">Upload CSV or JSON files containing multiple reviews for bulk analysis</p>
+        </div>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cloud-upload-alt me-2"></i>
+                        File Upload
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-content">
+                                <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                <h5>Drag & Drop Files Here</h5>
+                                <p class="text-muted">or click to browse</p>
+                                <input type="file" id="fileInput" accept=".csv,.json" style="display: none;">
+                                <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                                    <i class="fas fa-folder-open me-1"></i>Browse Files
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <div class="file-info" id="fileInfo" style="display: none;">
+                                <div class="selected-file">
+                                    <i class="fas fa-file me-2"></i>
+                                    <span id="fileName"></span>
+                                    <span class="text-muted ms-2" id="fileSize"></span>
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" id="removeFile">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Supported formats: CSV and JSON. Required column: "text". Maximum file size: 16MB.
+                            </small>
+                        </div>
+
+                        <!-- Processing Options -->
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <label for="confidenceThreshold" class="form-label">Confidence Threshold</label>
+                                <div class="input-group">
+                                    <input type="range" class="form-range" id="confidenceThreshold" min="0" max="100" value="70">
+                                    <span class="ms-2" id="thresholdValue">70%</span>
+                                </div>
+                                <small class="text-muted">Show only predictions above this confidence level</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="filterType" class="form-label">Filter Results</label>
+                                <select class="form-select" id="filterType">
+                                    <option value="all">Show All Results</option>
+                                    <option value="flagged">Show Only Flagged</option>
+                                    <option value="genuine">Show Only Genuine</option>
+                                    <option value="suspicious">Show Only Suspicious</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <button type="button" class="btn btn-outline-secondary" id="clearUpload">
+                                <i class="fas fa-trash me-1"></i>Clear
+                            </button>
+                            <button type="submit" class="btn btn-success" id="processBtn" disabled>
+                                <i class="fas fa-cog me-1"></i>Process Reviews
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Status -->
+    <div class="row mb-4" id="processingStatus" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border text-primary me-3" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <div>
+                            <h6 class="mb-1">Processing Reviews</h6>
+                            <p class="mb-0 text-muted">Running ML analysis on uploaded data...</p>
+                        </div>
+                        <div class="ms-auto">
+                            <span class="badge bg-primary" id="progressBadge">0%</span>
+                        </div>
+                    </div>
+                    <div class="progress mt-3" style="height: 5px;">
+                        <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="row mb-4" id="resultsSummary" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Analysis Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h3 class="text-primary" id="totalProcessed">0</h3>
+                                <small class="text-muted">Total Processed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h3 class="text-success" id="genuineResults">0</h3>
+                                <small class="text-muted">Genuine</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h3 class="text-warning" id="flaggedResults">0</h3>
+                                <small class="text-muted">Flagged</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h3 class="text-info" id="avgConfidence">0%</h3>
+                                <small class="text-muted">Avg Confidence</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-primary" id="downloadCsv">
+                            <i class="fas fa-download me-1"></i>Download CSV
+                        </button>
+                        <button class="btn btn-outline-primary" id="viewDetails">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="row" id="resultsTable" style="display: none;">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        Detailed Results
+                    </h5>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="filterAll">All</button>
+                        <button type="button" class="btn btn-sm btn-outline-success" id="filterGenuine">Genuine</button>
+                        <button type="button" class="btn btn-sm btn-outline-warning" id="filterSuspicious">Flagged</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="resultsDataTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Review Text</th>
+                                    <th>Prediction</th>
+                                    <th>Confidence</th>
+                                    <th>Risk Score</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody">
+                                <!-- Results will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">
+                            Showing <span id="showingCount">0</span> of <span id="totalCount">0</span> results
+                        </small>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0" id="pagination">
+                                <!-- Pagination will be generated here -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const removeFile = document.getElementById('removeFile');
+    const processBtn = document.getElementById('processBtn');
+    const confidenceThreshold = document.getElementById('confidenceThreshold');
+    const thresholdValue = document.getElementById('thresholdValue');
+    const uploadForm = document.getElementById('uploadForm');
+
+    let selectedFile = null;
+    let processedResults = null;
+    let currentPage = 1;
+    const itemsPerPage = 10;
+
+    // File upload handling
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileSelection(files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelection(e.target.files[0]);
+        }
+    });
+
+    removeFile.addEventListener('click', function() {
+        clearFile();
+    });
+
+    // Confidence threshold slider
+    confidenceThreshold.addEventListener('input', function() {
+        thresholdValue.textContent = this.value + '%';
+    });
+
+    // Form submission
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (selectedFile) {
+            processFile();
+        }
+    });
+
+    function handleFileSelection(file) {
+        // Validate file type
+        const allowedTypes = ['text/csv', 'application/json'];
+        if (!allowedTypes.includes(file.type) && !file.name.match(/\.(csv|json)$/i)) {
+            alert('Please select a CSV or JSON file.');
+            return;
+        }
+
+        // Validate file size (16MB limit)
+        if (file.size > 16 * 1024 * 1024) {
+            alert('File size must be less than 16MB.');
+            return;
+        }
+
+        selectedFile = file;
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        processBtn.disabled = false;
+    }
+
+    function clearFile() {
+        selectedFile = null;
+        fileInput.value = '';
+        fileInfo.style.display = 'none';
+        processBtn.disabled = true;
+        hideResults();
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function processFile() {
+        if (!selectedFile) return;
+
+        showProcessingStatus();
+        
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        fetch('/api/batch', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            processedResults = data.results;
+            showResults(data);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Processing failed: ' + error.message);
+        })
+        .finally(() => {
+            hideProcessingStatus();
+        });
+    }
+
+    function showProcessingStatus() {
+        document.getElementById('processingStatus').style.display = 'block';
+        processBtn.disabled = true;
+        
+        // Simulate progress (since we don't have real progress tracking)
+        let progress = 0;
+        const progressBar = document.getElementById('progressBar');
+        const progressBadge = document.getElementById('progressBadge');
+        
+        const interval = setInterval(() => {
+            progress += 10;
+            progressBar.style.width = progress + '%';
+            progressBadge.textContent = progress + '%';
+            
+            if (progress >= 100) {
+                clearInterval(interval);
+            }
+        }, 200);
+    }
+
+    function hideProcessingStatus() {
+        document.getElementById('processingStatus').style.display = 'none';
+        processBtn.disabled = false;
+    }
+
+    function showResults(data) {
+        // Show summary
+        const summary = data.summary;
+        document.getElementById('totalProcessed').textContent = summary.total;
+        document.getElementById('genuineResults').textContent = summary.genuine;
+        document.getElementById('flaggedResults').textContent = summary.flagged_count || (summary.total - summary.genuine);
+        
+        // Calculate and display average confidence
+        const avgConf = summary.avg_confidence || 0;
+        document.getElementById('avgConfidence').textContent = Math.round(avgConf * 100) + '%';
+        
+        // Show processing info if available
+        if (data.processing_info) {
+            const processingInfo = document.createElement('div');
+            processingInfo.className = 'alert alert-info mt-3';
+            processingInfo.innerHTML = `
+                <h6><i class="fas fa-info-circle me-2"></i>Processing Information</h6>
+                <p class="mb-1"><strong>File:</strong> ${data.processing_info.filename}</p>
+                <p class="mb-1"><strong>Total Rows:</strong> ${data.processing_info.total_rows}</p>
+                <p class="mb-1"><strong>Mode:</strong> ${data.processing_info.demo_mode ? 'Demo Mode' : 'Production'}</p>
+                <p class="mb-0"><strong>Processed:</strong> ${data.processing_info.processing_time}</p>
+            `;
+            document.getElementById('resultsSummary').appendChild(processingInfo);
+        }
+        
+        document.getElementById('resultsSummary').style.display = 'block';
+        
+        // Show detailed statistics if available
+        if (data.detailed_stats) {
+            displayDetailedStats(data.detailed_stats);
+        }
+        
+        // Show table
+        populateResultsTable(data.results);
+        document.getElementById('resultsTable').style.display = 'block';
+        
+        // Scroll to results
+        document.getElementById('resultsSummary').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function hideResults() {
+        document.getElementById('resultsSummary').style.display = 'none';
+        document.getElementById('resultsTable').style.display = 'none';
+    }
+
+    function populateResultsTable(results) {
+        const tableBody = document.getElementById('resultsTableBody');
+        tableBody.innerHTML = '';
+
+        const threshold = confidenceThreshold.value / 100;
+        const filteredResults = results.filter(r => r.final_confidence >= threshold);
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = startIndex + itemsPerPage;
+        const pageResults = filteredResults.slice(startIndex, endIndex);
+
+        pageResults.forEach((result, index) => {
+            const row = document.createElement('tr');
+            
+            const predictionBadge = getPredictionBadge(result.final_prediction);
+            const actionBadge = getActionBadge(result.routing_decision);
+            const confidencePercent = Math.round(result.final_confidence * 100);
+            const riskPercent = Math.round(result.p_bad_score * 100);
+            
+            row.innerHTML = `
+                <td>
+                    <div class="text-truncate" style="max-width: 300px;" title="${result.text}">
+                        ${result.text}
+                    </div>
+                </td>
+                <td>${predictionBadge}</td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="progress me-2" style="width: 60px; height: 8px;">
+                            <div class="progress-bar" style="width: ${confidencePercent}%"></div>
+                        </div>
+                        <small>${confidencePercent}%</small>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex align-items-center">
+                        <div class="progress me-2" style="width: 60px; height: 8px;">
+                            <div class="progress-bar bg-warning" style="width: ${riskPercent}%"></div>
+                        </div>
+                        <small>${riskPercent}%</small>
+                    </div>
+                </td>
+                <td>${actionBadge}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="showDetailModal(${startIndex + index})">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+
+        // Update pagination
+        updatePagination(filteredResults.length);
+        
+        // Update counts
+        document.getElementById('showingCount').textContent = pageResults.length;
+        document.getElementById('totalCount').textContent = filteredResults.length;
+    }
+
+    function getPredictionBadge(prediction) {
+        const badges = {
+            'genuine': '<span class="badge bg-success">Genuine</span>',
+            'suspicious': '<span class="badge bg-warning">Suspicious</span>',
+            'low-quality': '<span class="badge bg-warning">Low Quality</span>',
+            'high-confidence-spam': '<span class="badge bg-danger">Spam</span>'
+        };
+        return badges[prediction] || '<span class="badge bg-secondary">Unknown</span>';
+    }
+
+    function getActionBadge(routing) {
+        const badges = {
+            'automatic-approval': '<span class="badge bg-success">Auto-Approve</span>',
+            'requires-manual-verification': '<span class="badge bg-warning">Manual Review</span>',
+            'automatic-rejection': '<span class="badge bg-danger">Auto-Reject</span>'
+        };
+        return badges[routing] || '<span class="badge bg-secondary">Unknown</span>';
+    }
+
+    function updatePagination(totalItems) {
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        // Previous button
+        const prevBtn = document.createElement('li');
+        prevBtn.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+        prevBtn.innerHTML = '<a class="page-link" href="#" onclick="changePage(' + (currentPage - 1) + ')">Previous</a>';
+        pagination.appendChild(prevBtn);
+
+        // Page numbers
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                const pageBtn = document.createElement('li');
+                pageBtn.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                pageBtn.innerHTML = '<a class="page-link" href="#" onclick="changePage(' + i + ')">' + i + '</a>';
+                pagination.appendChild(pageBtn);
+            }
+        }
+
+        // Next button
+        const nextBtn = document.createElement('li');
+        nextBtn.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+        nextBtn.innerHTML = '<a class="page-link" href="#" onclick="changePage(' + (currentPage + 1) + ')">Next</a>';
+        pagination.appendChild(nextBtn);
+    }
+
+    // Global functions for onclick handlers
+    window.changePage = function(page) {
+        if (page >= 1 && processedResults) {
+            currentPage = page;
+            populateResultsTable(processedResults);
+        }
+    };
+
+    window.showDetailModal = function(index) {
+        const result = processedResults[index];
+        // This would open a modal with detailed information
+        alert('Detailed view for: ' + result.text.substring(0, 100) + '...');
+    };
+
+    // Download functionality
+    document.getElementById('downloadCsv').addEventListener('click', function() {
+        if (processedResults) {
+            downloadResultsAsCsv();
+        }
+    });
+
+    function downloadResultsAsCsv() {
+        const headers = ['Text', 'Prediction', 'Confidence', 'Risk Score', 'Action', 'BART Prediction'];
+        const csvContent = [
+            headers.join(','),
+            ...processedResults.map(result => [
+                '"' + result.text.replace(/"/g, '""') + '"',
+                result.final_prediction,
+                result.final_confidence,
+                result.p_bad_score,
+                result.routing_decision,
+                result.bart_prediction
+            ].join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'review_analysis_results.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+
+    function displayDetailedStats(stats) {
+        if (!stats || stats.total_valid === 0) return;
+        
+        // Create detailed stats section
+        const detailedStatsDiv = document.createElement('div');
+        detailedStatsDiv.className = 'mt-4';
+        detailedStatsDiv.innerHTML = `
+            <h6><i class="fas fa-chart-pie me-2"></i>Detailed Analysis</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted">BART Classifications</h6>
+                    <div id="bartBreakdown"></div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted">Confidence Distribution</h6>
+                    <div id="confidenceBreakdown"></div>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <h6 class="text-muted">Risk Score Distribution</h6>
+                    <div id="riskBreakdown"></div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-muted">Routing Decisions</h6>
+                    <div id="routingBreakdown"></div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('resultsSummary').appendChild(detailedStatsDiv);
+        
+        // Populate breakdown sections
+        populateBreakdown('bartBreakdown', stats.bart_predictions);
+        populateBreakdown('confidenceBreakdown', stats.confidence_distribution);
+        populateBreakdown('riskBreakdown', stats.risk_distribution);
+        populateBreakdown('routingBreakdown', stats.routing_decisions);
+    }
+
+    function populateBreakdown(elementId, data) {
+        const element = document.getElementById(elementId);
+        element.innerHTML = '';
+        
+        Object.entries(data).forEach(([key, value]) => {
+            const displayKey = key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const bar = document.createElement('div');
+            bar.className = 'mb-2';
+            bar.innerHTML = `
+                <div class="d-flex justify-content-between">
+                    <small>${displayKey}</small>
+                    <small>${value}</small>
+                </div>
+                <div class="progress" style="height: 6px;">
+                    <div class="progress-bar bg-primary" style="width: ${(value / Math.max(...Object.values(data))) * 100}%"></div>
+                </div>
+            `;
+            element.appendChild(bar);
+        });
+    }
+});
+</script>
+{% endblock %}

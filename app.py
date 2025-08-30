@@ -1,722 +1,635 @@
-"""
-🛡️ Fake Review Detection System - Web Interface
-Main Streamlit application for fake review detection with dashboard capabilities.
+🛡️ Smart Review Guardian - Web Interface
+Modern UI for the fake review detection system
 """
 
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from pathlib import Path
+import os
 import sys
 import json
-from datetime import datetime, timedelta
+import logging
+from pathlib import Path
+from flask import Flask, render_template, request, jsonify, send_file
+import pandas as pd
 import numpy as np
+from datetime import datetime
+from typing import Dict, List, Any, Optional
+import io
+import csv
 
-# Add project paths for imports
+# Setup paths
 PROJECT_ROOT = Path(__file__).parent
-sys.path.append(str(PROJECT_ROOT / "scripts" / "evaluation"))
-sys.path.append(str(PROJECT_ROOT / "core"))
+CORE_PATH = PROJECT_ROOT / "core"
+SCRIPTS_PATH = PROJECT_ROOT / "scripts"
+OUTPUT_PATH = PROJECT_ROOT / "output"
+MODELS_PATH = PROJECT_ROOT / "models"
 
-# Page configuration
-st.set_page_config(
-    page_title="Fake Review Detection System",
-    page_icon="🛡️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Add paths for imports
+sys.path.append(str(SCRIPTS_PATH / "prediction"))
+sys.path.append(str(CORE_PATH / "stage1_bart"))
+sys.path.append(str(CORE_PATH / "stage2_metadata"))
+sys.path.append(str(CORE_PATH / "fusion"))
 
-# Custom CSS for dark mode and styling
-def load_css():
-    st.markdown("""
-    <style>
-    /* Dark mode variables */
-    :root {
-        --bg-color: #0E1117;
-        --secondary-bg: #262730;
-        --text-color: #FAFAFA;
-        --text-secondary: #CCCCCC;
-        --text-muted: #999999;
-        --accent-color: #FF6B6B;
-        --success-color: #4ECDC4;
-        --warning-color: #FFE66D;
-        --border-color: #333333;
-    }
-    
-    /* Apply dark mode colors to all text elements including small text */
-    .stApp {
-        background-color: var(--bg-color);
-        color: var(--text-color);
-    }
-    
-    /* Ensure small text elements are properly colored in dark mode */
-    .stApp p, .stApp span, .stApp div, .stApp label, .stApp small {
-        color: var(--text-color) !important;
-    }
-    
-    .stApp .stMarkdown small, .stApp .caption, .stApp .help {
-        color: var(--text-muted) !important;
-    }
-    
-    /* Card styling */
-    .metric-card {
-        background-color: var(--secondary-bg);
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid var(--border-color);
-        margin: 0.5rem 0;
-    }
-    
-    /* Navigation styling */
-    .nav-link {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        margin: 0.25rem;
-        background-color: var(--secondary-bg);
-        border-radius: 4px;
-        text-decoration: none;
-        color: var(--text-color);
-        border: 1px solid var(--border-color);
-    }
-    
-    .nav-link:hover {
-        background-color: var(--accent-color);
-        color: white;
-    }
-    
-    /* Status indicators */
-    .status-genuine { color: var(--success-color); }
-    .status-suspicious { color: var(--warning-color); }
-    .status-spam { color: var(--accent-color); }
-    
-    /* Fix sidebar text in dark mode */
-    .css-1d391kg, .css-1d391kg p, .css-1d391kg span {
-        color: var(--text-color) !important;
-    }
-    
-    /* Fix selectbox and input text */
-    .stSelectbox label, .stTextInput label, .stTextArea label {
-        color: var(--text-color) !important;
-    }
-    
-    /* Fix multiselect labels and help text */
-    .stMultiSelect label, .stMultiSelect .help {
-        color: var(--text-color) !important;
-    }
-    
-    /* Fix checkbox labels */
-    .stCheckbox label {
-        color: var(--text-color) !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# Create Flask app
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'review-guardian-secret-key'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-# Business categories for dropdown (top 8 most common + Other)
-BUSINESS_CATEGORIES = [
-    "Restaurant",
-    "Hotel", 
-    "Retail Store",
-    "Service Business",
-    "Healthcare",
-    "Entertainment",
-    "Automotive",
-    "Technology",
-    "Other"
-]
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Review categories for filtering
-REVIEW_CATEGORIES = [
-    "genuine_positive",
-    "genuine_negative", 
-    "spam",
-    "low_quality",
-    "suspicious",
-    "advertisement",
-    "fake_positive",
-    "irrelevant"
-]
+# Global predictor instance
+predictor = None
 
-def main():
-    load_css()
+class SmartReviewGuardian:
+    """Main application class for the Smart Review Guardian web interface"""
     
-    # Sidebar navigation
-    st.sidebar.title("🛡️ Navigation")
-    
-    page = st.sidebar.selectbox(
-        "Select Page",
-        ["Main Dashboard", "Single Review Analysis", "Batch Analysis", "Violation List"]
-    )
-    
-    # Dark mode toggle (for future enhancement)
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### Settings")
-    dark_mode = st.sidebar.checkbox("Dark Mode", value=True)
-    
-    # Navigation links
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### Quick Links")
-    st.sidebar.markdown("""
-    - [📊 Main Dashboard](#main-dashboard)
-    - [🔍 Single Review Analysis](#single-review-analysis)  
-    - [📝 Batch Analysis](#batch-analysis)
-    - [⚠️ Violation List](#violation-list)
-    """, unsafe_allow_html=True)
-    
-    # Route to appropriate page
-    if page == "Main Dashboard":
-        show_main_dashboard()
-    elif page == "Single Review Analysis":
-        show_single_review_analysis()
-    elif page == "Batch Analysis":
-        show_batch_analysis()
-    elif page == "Violation List":
-        show_violation_list()
-
-def show_main_dashboard():
-    """Main dashboard page with overview and links to other sections"""
-    st.title("🛡️ Fake Review Detection System")
-    st.markdown("### Main Dashboard")
-    
-    # Overview metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown("""
-        <div class="metric-card">
-            <h3>📊 Total Reviews</h3>
-            <h2 class="status-genuine">1,247</h2>
-            <small>Last 30 days</small>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown("""
-        <div class="metric-card">
-            <h3>✅ Genuine</h3>
-            <h2 class="status-genuine">892 (71.5%)</h2>
-            <small>High confidence reviews</small>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown("""
-        <div class="metric-card">
-            <h3>⚠️ Suspicious</h3>
-            <h2 class="status-suspicious">245 (19.6%)</h2>
-            <small>Require manual review</small>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown("""
-        <div class="metric-card">
-            <h3>🚫 Spam/Fake</h3>
-            <h2 class="status-spam">110 (8.9%)</h2>
-            <small>Automatically flagged</small>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    st.markdown("---")
-    
-    # Quick action buttons
-    st.markdown("### Quick Actions")
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("🔍 Analyze Single Review", use_container_width=True):
-            st.session_state.page = "Single Review Analysis"
-            st.rerun()
-    
-    with col2:
-        if st.button("📝 Batch Analysis", use_container_width=True):
-            st.session_state.page = "Batch Analysis"
-            st.rerun()
-    
-    with col3:
-        if st.button("⚠️ View Violations", use_container_width=True):
-            st.session_state.page = "Violation List"
-            st.rerun()
-    
-    st.markdown("---")
-    
-    # Recent activity summary (no policy violation breakdown chart as requested)
-    st.markdown("### Recent Activity Summary")
-    
-    # Create sample data for demonstration
-    sample_data = pd.DataFrame({
-        'Date': pd.date_range(start='2025-01-01', periods=30, freq='D'),
-        'Genuine': np.random.randint(20, 40, 30),
-        'Suspicious': np.random.randint(5, 15, 30),
-        'Spam': np.random.randint(2, 8, 30)
-    })
-    
-    fig = px.line(sample_data, x='Date', y=['Genuine', 'Suspicious', 'Spam'],
-                  title="Daily Review Classification Trends",
-                  labels={'value': 'Number of Reviews', 'variable': 'Classification'})
-    fig.update_layout(
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)',
-        font_color='#FAFAFA'
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-def show_single_review_analysis():
-    """Single review analysis page with business category dropdown"""
-    st.title("🔍 Single Review Analysis")
-    st.markdown("### Analyze Individual Reviews")
-    
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.markdown("#### Review Details")
-        
-        # Business category dropdown with fixed options (top 8 + Other)
-        business_category = st.selectbox(
-            "Business Category",
-            BUSINESS_CATEGORIES,
-            help="Select the business category for better analysis context"
-        )
-        
-        business_name = st.text_input("Business Name (Optional)", placeholder="e.g., Mario's Italian Restaurant")
-        
-        review_text = st.text_area(
-            "Review Text",
-            placeholder="Enter the review text to analyze...",
-            height=150
-        )
-        
-        # Additional optional fields
-        st.markdown("#### Additional Information (Optional)")
-        
-        col_rating, col_date = st.columns(2)
-        with col_rating:
-            rating = st.selectbox("Rating", [None, 1, 2, 3, 4, 5], index=0)
-        with col_date:
-            review_date = st.date_input("Review Date", value=None)
-        
-        reviewer_name = st.text_input("Reviewer Name (Optional)")
-        
-        if st.button("🔍 Analyze Review", type="primary", use_container_width=True):
-            if review_text.strip():
-                analyze_single_review(review_text, business_category, business_name, rating, reviewer_name)
-            else:
-                st.error("Please enter review text to analyze.")
-    
-    with col2:
-        st.markdown("#### Analysis Results")
-        
-        if 'single_analysis_result' in st.session_state:
-            result = st.session_state.single_analysis_result
-            
-            # Display classification result
-            classification = result.get('classification', 'Unknown')
-            confidence = result.get('confidence', 0)
-            
-            if classification in ['genuine_positive', 'genuine_negative']:
-                status_class = 'status-genuine'
-                icon = '✅'
-            elif classification in ['suspicious', 'low_quality']:
-                status_class = 'status-suspicious'
-                icon = '⚠️'
-            else:
-                status_class = 'status-spam'
-                icon = '🚫'
-            
-            st.markdown(f"""
-            <div class="metric-card">
-                <h3>{icon} Classification</h3>
-                <h4 class="{status_class}">{classification.replace('_', ' ').title()}</h4>
-                <p>Confidence: {confidence:.1%}</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Risk score
-            risk_score = result.get('risk_score', 0)
-            risk_color = 'status-genuine' if risk_score < 0.3 else 'status-suspicious' if risk_score < 0.7 else 'status-spam'
-            
-            st.markdown(f"""
-            <div class="metric-card">
-                <h3>📊 Risk Score</h3>
-                <h4 class="{risk_color}">{risk_score:.3f}</h4>
-                <small>Lower is better</small>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Key indicators
-            st.markdown("#### Key Indicators")
-            indicators = result.get('indicators', [])
-            for indicator in indicators:
-                st.markdown(f"• {indicator}")
-        
-        else:
-            st.info("Enter review details and click 'Analyze Review' to see results here.")
-
-def analyze_single_review(review_text, business_category, business_name, rating, reviewer_name):
-    """Analyze a single review using the ML backend"""
-    try:
-        # Mock analysis for demonstration - in real implementation, this would call the ML models
-        import random
-        
-        # Simulate analysis delay
-        with st.spinner("Analyzing review..."):
-            import time
-            time.sleep(2)
-        
-        # Mock classification result
-        classifications = ['genuine_positive', 'genuine_negative', 'suspicious', 'spam', 'low_quality']
-        classification = random.choice(classifications)
-        confidence = random.uniform(0.6, 0.95)
-        risk_score = random.uniform(0.1, 0.8)
-        
-        # Mock indicators based on classification
-        if classification in ['genuine_positive', 'genuine_negative']:
-            indicators = [
-                "Natural language patterns detected",
-                "Appropriate length and detail",
-                f"Content matches {business_category.lower()} context"
-            ]
-        elif classification == 'suspicious':
-            indicators = [
-                "Mixed signals in content analysis",
-                "Unusual posting patterns detected",
-                "Requires manual verification"
-            ]
-        else:
-            indicators = [
-                "Suspicious language patterns",
-                "Potential promotional content",
-                "Low content quality signals"
-            ]
-        
-        result = {
-            'classification': classification,
-            'confidence': confidence,
-            'risk_score': risk_score,
-            'indicators': indicators
+    def __init__(self):
+        self.predictor = None
+        self.stats = {
+            'total_processed': 0,
+            'genuine_count': 0,
+            'suspicious_count': 0,
+            'low_quality_count': 0,
+            'spam_count': 0,
+            'last_updated': datetime.now().isoformat()
         }
         
-        st.session_state.single_analysis_result = result
-        st.success("Analysis complete!")
-        
-    except Exception as e:
-        st.error(f"Error during analysis: {str(e)}")
-
-def show_batch_analysis():
-    """Batch analysis page without confidence threshold, with multi-category filters"""
-    st.title("📝 Batch Analysis")
-    st.markdown("### Analyze Multiple Reviews")
-    
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.markdown("#### Upload Data")
-        
-        uploaded_file = st.file_uploader(
-            "Choose CSV file",
-            type=['csv'],
-            help="Upload a CSV file with review data. Required column: 'text' or 'review_text'"
-        )
-        
-        if uploaded_file is not None:
-            try:
-                df = pd.read_csv(uploaded_file)
-                st.success(f"✅ File uploaded successfully! Found {len(df)} reviews.")
-                
-                # Show preview
-                st.markdown("#### Data Preview")
-                st.dataframe(df.head(), use_container_width=True)
-                
-                # Column selection
-                text_columns = [col for col in df.columns if 'text' in col.lower() or 'review' in col.lower() or 'content' in col.lower()]
-                if text_columns:
-                    selected_column = st.selectbox("Select text column", text_columns)
-                else:
-                    selected_column = st.selectbox("Select text column", df.columns.tolist())
-                
-                # Analysis button
-                if st.button("🚀 Start Batch Analysis", type="primary", use_container_width=True):
-                    run_batch_analysis(df, selected_column)
-                    
-            except Exception as e:
-                st.error(f"Error reading file: {str(e)}")
-        
-        else:
-            # Sample data option
-            st.markdown("#### Or Try Sample Data")
-            if st.button("📊 Load Sample Dataset"):
-                load_sample_batch_data()
-    
-    with col2:
-        st.markdown("#### Filter Options")
-        
-        # Multi-checkbox filters for all categories (as requested)
-        st.markdown("**Review Categories**")
-        selected_categories = []
-        
-        for category in REVIEW_CATEGORIES:
-            if st.checkbox(category.replace('_', ' ').title(), key=f"filter_{category}"):
-                selected_categories.append(category)
-        
-        if selected_categories:
-            st.info(f"Filtering by: {', '.join(selected_categories)}")
-        
-        # Note: Confidence threshold removed as requested
-        st.markdown("---")
-        st.markdown("#### Analysis Options")
-        
-        show_details = st.checkbox("Show detailed analysis", value=True)
-        export_results = st.checkbox("Export results", value=True)
-        
-        # Display current filters
-        if 'batch_results' in st.session_state:
-            st.markdown("#### Quick Stats")
-            results = st.session_state.batch_results
+    def initialize_predictor(self):
+        """Initialize the ML prediction pipeline"""
+        try:
+            from predict_review_quality import ReviewQualityPredictor
+            self.predictor = ReviewQualityPredictor()
             
-            if selected_categories:
-                filtered_results = results[results['classification'].isin(selected_categories)]
+            # Try to load models - this will now gracefully handle failures
+            if self.predictor.load_models():
+                logger.info("✅ ML models loaded successfully")
+                return True
             else:
-                filtered_results = results
-            
-            st.metric("Total Reviews", len(filtered_results))
-            st.metric("Genuine", len(filtered_results[filtered_results['classification'].str.contains('genuine', na=False)]))
-            st.metric("Suspicious", len(filtered_results[filtered_results['classification'] == 'suspicious']))
-            st.metric("Spam/Fake", len(filtered_results[filtered_results['classification'].isin(['spam', 'fake_positive'])]))
-
-def run_batch_analysis(df, text_column):
-    """Run batch analysis on uploaded data"""
-    try:
-        with st.spinner("Processing batch analysis..."):
-            import time
-            time.sleep(3)  # Simulate processing
-            
-            # Mock batch analysis results
-            results = []
-            for idx, row in df.iterrows():
-                text = row[text_column]
+                logger.warning("⚠️ Could not load all models, but BART fallback is available")
+                # Even if complex models fail, we can still use BART with fallback
+                self.predictor = None  # Will use demo mode with better fallback
+                return False
+        except Exception as e:
+            logger.error(f"❌ Failed to initialize predictor: {e}")
+            self.predictor = None  # Will use demo mode
+            return False
+    
+    def predict_single_review(self, text: str, metadata: Optional[Dict] = None) -> Dict:
+        """Predict quality of a single review"""
+        if not self.predictor:
+            # Try to use BART classifier directly as fallback
+            try:
+                import sys
+                sys.path.append(str(PROJECT_ROOT / "core" / "stage1_bart"))
+                from enhanced_bart_review_classifier import BARTReviewClassifier
                 
-                # Mock classification
-                import random
-                classification = random.choice(REVIEW_CATEGORIES)
-                confidence = random.uniform(0.5, 0.95)
-                risk_score = random.uniform(0.1, 0.9)
+                bart_classifier = BARTReviewClassifier(model_path=None, use_gpu=False)
+                bart_result = bart_classifier.predict_single(text)
                 
-                results.append({
-                    'index': idx,
-                    'text': text,
-                    'classification': classification,
-                    'confidence': confidence,
-                    'risk_score': risk_score
-                })
+                # Convert BART result to app format
+                result = self._convert_bart_result_to_app_format(bart_result, text, metadata)
+                result['demo_mode'] = False
+                result['fallback_mode'] = True
+                
+                self._update_stats(result['final_prediction'])
+                return result
+                
+            except Exception as e:
+                logger.warning(f"BART fallback failed: {e}, using demo mode")
+                return self._generate_demo_result(text)
+        
+        try:
+            result = self.predictor.predict_single_review(text, metadata)
+            # Add additional fields for UI display
+            result['demo_mode'] = False
+            result['fallback_mode'] = False
             
-            results_df = pd.DataFrame(results)
-            st.session_state.batch_results = results_df
-            
-            st.success(f"✅ Batch analysis complete! Processed {len(results)} reviews.")
-            
-            # Display results
-            st.markdown("#### Analysis Results")
-            
-            # Summary charts
-            fig = px.histogram(results_df, x='classification', 
-                             title="Review Classification Distribution",
-                             labels={'count': 'Number of Reviews'})
-            fig.update_layout(
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                font_color='#FAFAFA'
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Results table
-            st.dataframe(results_df, use_container_width=True)
-            
-            # Download option
-            csv = results_df.to_csv(index=False)
-            st.download_button(
-                label="📥 Download Results",
-                data=csv,
-                file_name=f"batch_analysis_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
+            # Map routing decisions to user-friendly descriptions
+            routing_descriptions = {
+                'automatic-approval': 'This review can be automatically approved for publication.',
+                'requires-manual-verification': 'This review requires human verification before publication.',
+                'automatic-rejection': 'This review should be automatically rejected.'
+            }
+            result['routing_description'] = routing_descriptions.get(
+                result.get('routing_decision', ''), 
+                'Unknown routing decision'
             )
             
-    except Exception as e:
-        st.error(f"Error during batch analysis: {str(e)}")
-
-def load_sample_batch_data():
-    """Load sample data for demonstration"""
-    sample_data = pd.DataFrame({
-        'review_text': [
-            "Great product, fast shipping, highly recommend!",
-            "Buy now! Amazing deals! Click here for discount codes!",
-            "Terrible quality, completely broken on arrival",
-            "Decent product for the price, nothing special",
-            "BEST EVER!!!! Everyone should buy this NOW!!!",
-            "Good customer service, resolved my issue quickly",
-            "Random spam content not related to business",
-            "Professional service, clean facilities, will return"
-        ],
-        'rating': [5, 5, 1, 3, 5, 4, 1, 4],
-        'reviewer': ['John D.', 'PromoBot', 'Sarah M.', 'Mike R.', 'FakeUser123', 'Anna L.', 'SpamBot', 'Professional User']
-    })
+            # Add detailed analysis breakdown
+            result['stage_analysis'] = {
+                'stage1_bart': {
+                    'prediction': result.get('bart_prediction', 'unknown'),
+                    'confidence': result.get('bart_confidence', 0.0),
+                    'description': 'BART model classification of review content'
+                },
+                'stage2_metadata': {
+                    'anomaly_score': result.get('metadata_anomaly_score', 0.0),
+                    'description': 'Behavioral pattern and metadata analysis'
+                },
+                'stage3_fusion': {
+                    'final_prediction': result.get('final_prediction', 'unknown'),
+                    'final_confidence': result.get('final_confidence', 0.0),
+                    'fusion_score': result.get('fusion_score', 0.0),
+                    'description': 'Advanced fusion model combining all signals'
+                }
+            }
+            
+            self._update_stats(result['final_prediction'])
+            return result
+        except Exception as e:
+            logger.error(f"Prediction failed: {e}")
+            return self._generate_demo_result(text, error=str(e))
     
-    st.session_state.sample_data = sample_data
-    st.success("Sample data loaded! Click 'Start Batch Analysis' to process.")
-    st.dataframe(sample_data, use_container_width=True)
-
-def show_violation_list():
-    """Violation List page - combining filters with recent violations as requested"""
-    st.title("⚠️ Violation List")
-    st.markdown("### Policy Violations and Recent Issues")
-    
-    # Filter options (moved here as requested)
-    col1, col2 = st.columns([1, 3])
-    
-    with col1:
-        st.markdown("#### Filters")
+    def process_batch_reviews(self, reviews_data: List[Dict]) -> Dict[str, Any]:
+        """Process multiple reviews with detailed analysis"""
+        results = []
+        total_reviews = len(reviews_data)
         
-        # Date range filter
-        date_range = st.date_input(
-            "Date Range",
-            value=[datetime.now() - timedelta(days=7), datetime.now()],
-            max_value=datetime.now()
-        )
+        # Initialize progress tracking
+        batch_stats = {
+            'total': total_reviews,
+            'processed': 0,
+            'genuine': 0,
+            'suspicious': 0,
+            'low_quality': 0,
+            'spam': 0,
+            'errors': 0
+        }
         
-        # Severity filter
-        severity_filter = st.multiselect(
-            "Severity Level",
-            ["High", "Medium", "Low"],
-            default=["High", "Medium"]
-        )
+        # Check if we have a working predictor or need to use BART fallback
+        use_bart_fallback = not self.predictor
+        bart_classifier = None
         
-        # Violation type filter
-        violation_types = [
-            "Spam Detection",
-            "Fake Reviews", 
-            "Policy Violations",
-            "Content Violations",
-            "User Behavior Issues"
-        ]
+        if use_bart_fallback:
+            try:
+                import sys
+                sys.path.append(str(PROJECT_ROOT / "core" / "stage1_bart"))
+                from enhanced_bart_review_classifier import BARTReviewClassifier
+                bart_classifier = BARTReviewClassifier(model_path=None, use_gpu=False)
+                logger.info("Using BART classifier with fallback for batch processing")
+            except Exception as e:
+                logger.warning(f"BART fallback setup failed: {e}, using demo mode")
         
-        selected_violations = st.multiselect(
-            "Violation Types",
-            violation_types,
-            default=violation_types
-        )
+        for i, review in enumerate(reviews_data):
+            try:
+                text = review.get('text', '')
+                metadata = {k: v for k, v in review.items() if k != 'text'}
+                
+                # Predict single review using appropriate method
+                if bart_classifier:
+                    bart_result = bart_classifier.predict_single(text)
+                    result = self._convert_bart_result_to_app_format(bart_result, text, metadata)
+                    result['demo_mode'] = False
+                    result['fallback_mode'] = True
+                else:
+                    result = self.predict_single_review(text, metadata)
+                
+                # Add batch-specific metadata
+                result['batch_index'] = i
+                result['original_data'] = review
+                
+                # Update batch statistics
+                prediction = result.get('final_prediction', 'unknown')
+                if prediction == 'genuine':
+                    batch_stats['genuine'] += 1
+                elif prediction == 'suspicious':
+                    batch_stats['suspicious'] += 1
+                elif prediction == 'low-quality':
+                    batch_stats['low_quality'] += 1
+                elif prediction == 'high-confidence-spam':
+                    batch_stats['spam'] += 1
+                
+                batch_stats['processed'] += 1
+                results.append(result)
+                
+            except Exception as e:
+                logger.error(f"Error processing review {i}: {e}")
+                batch_stats['errors'] += 1
+                
+                # Add error result
+                error_result = self._generate_demo_result(text, error=str(e))
+                error_result['batch_index'] = i
+                error_result['error'] = True
+                results.append(error_result)
         
-        # Status filter
-        status_filter = st.multiselect(
-            "Status",
-            ["Open", "In Review", "Resolved", "Escalated"],
-            default=["Open", "In Review"]
-        )
-    
-    with col2:
-        st.markdown("#### Recent Violations")
-        
-        # Generate sample violation data
-        sample_violations = generate_sample_violations()
-        
-        # Apply filters
-        filtered_violations = apply_violation_filters(
-            sample_violations, severity_filter, selected_violations, status_filter
-        )
-        
-        if not filtered_violations.empty:
-            # Display violation summary
-            col_total, col_high, col_pending = st.columns(3)
+        # Calculate summary statistics
+        if batch_stats['processed'] > 0:
+            batch_stats['genuine_percentage'] = round((batch_stats['genuine'] / batch_stats['processed']) * 100, 1)
+            batch_stats['flagged_count'] = batch_stats['processed'] - batch_stats['genuine']
+            batch_stats['flagged_percentage'] = round((batch_stats['flagged_count'] / batch_stats['processed']) * 100, 1)
             
-            with col_total:
-                st.metric("Total Violations", len(filtered_violations))
+            # Calculate average confidence
+            confidences = [r.get('final_confidence', 0) for r in results if not r.get('error')]
+            batch_stats['avg_confidence'] = sum(confidences) / len(confidences) if confidences else 0
             
-            with col_high:
-                high_severity = len(filtered_violations[filtered_violations['Severity'] == 'High'])
-                st.metric("High Severity", high_severity)
-            
-            with col_pending:
-                pending = len(filtered_violations[filtered_violations['Status'].isin(['Open', 'In Review'])])
-                st.metric("Pending Review", pending)
-            
-            st.markdown("---")
-            
-            # Violations table
-            st.dataframe(
-                filtered_violations[['Date', 'Type', 'Description', 'Severity', 'Status', 'Business']],
-                use_container_width=True
-            )
-            
-            # Action buttons
-            st.markdown("#### Actions")
-            col_export, col_escalate, col_resolve = st.columns(3)
-            
-            with col_export:
-                if st.button("📊 Export Report"):
-                    csv = filtered_violations.to_csv(index=False)
-                    st.download_button(
-                        "Download CSV",
-                        csv,
-                        f"violations_report_{datetime.now().strftime('%Y%m%d')}.csv",
-                        "text/csv"
-                    )
-            
-            with col_escalate:
-                if st.button("⚡ Escalate Selected"):
-                    st.info("Escalation feature would be implemented here")
-            
-            with col_resolve:
-                if st.button("✅ Mark Resolved"):
-                    st.info("Resolution feature would be implemented here")
-        
+            # Calculate average risk score
+            risk_scores = [r.get('p_bad_score', 0) for r in results if not r.get('error')]
+            batch_stats['avg_risk_score'] = sum(risk_scores) / len(risk_scores) if risk_scores else 0
         else:
-            st.info("No violations found matching the selected filters.")
+            batch_stats.update({
+                'genuine_percentage': 0,
+                'flagged_count': 0,
+                'flagged_percentage': 0,
+                'avg_confidence': 0,
+                'avg_risk_score': 0
+            })
+        
+        return {
+            'results': results,
+            'summary': batch_stats,
+            'detailed_stats': self._generate_detailed_batch_stats(results),
+            'fallback_mode': use_bart_fallback
+        }
+    
+    def _generate_demo_result(self, text: str, error: str = None) -> Dict:
+        """Generate demo results when models aren't available"""
+        import random
+        import hashlib
+        
+        # Use text hash for consistent results per text
+        text_hash = int(hashlib.md5(text.encode()).hexdigest()[:8], 16)
+        random.seed(text_hash)
+        
+        # Simple heuristics for demo that feel realistic
+        text_length = len(text)
+        has_caps = any(c.isupper() for c in text)
+        has_numbers = any(c.isdigit() for c in text)
+        word_count = len(text.split())
+        
+        # Bias predictions based on simple text characteristics
+        if text_length < 20:
+            # Very short text tends to be spam
+            prediction_weights = [0.1, 0.2, 0.3, 0.4]  # [genuine, suspicious, low-quality, spam]
+        elif text_length > 500:
+            # Very long text might be spam or genuine detailed review
+            prediction_weights = [0.3, 0.3, 0.2, 0.2]
+        elif has_caps and has_numbers:
+            # Caps and numbers might indicate spam
+            prediction_weights = [0.2, 0.4, 0.2, 0.2]
+        else:
+            # Normal-looking text is more likely genuine
+            prediction_weights = [0.6, 0.2, 0.15, 0.05]
+        
+        categories = ['genuine', 'suspicious', 'low-quality', 'high-confidence-spam']
+        prediction = random.choices(categories, weights=prediction_weights)[0]
+        
+        # Generate confidence based on prediction
+        confidence_ranges = {
+            'genuine': (0.7, 0.95),
+            'suspicious': (0.6, 0.85),
+            'low-quality': (0.65, 0.9),
+            'high-confidence-spam': (0.8, 0.98)
+        }
+        confidence_min, confidence_max = confidence_ranges[prediction]
+        confidence = random.uniform(confidence_min, confidence_max)
+        
+        # Generate BART prediction based on final prediction
+        bart_mapping = {
+            'genuine': ['genuine_positive', 'genuine_negative'],
+            'suspicious': ['spam', 'advertisement', 'irrelevant'],
+            'low-quality': ['irrelevant', 'fake_rant'],
+            'high-confidence-spam': ['spam', 'advertisement', 'inappropriate']
+        }
+        bart_prediction = random.choice(bart_mapping[prediction])
+        
+        # Generate routing decision
+        routing_map = {
+            'genuine': 'automatic-approval',
+            'suspicious': 'requires-manual-verification',
+            'low-quality': 'requires-manual-verification',
+            'high-confidence-spam': 'automatic-rejection'
+        }
+        
+        # Generate probability distribution
+        labels = ['genuine_positive', 'genuine_negative', 'spam', 'advertisement', 'irrelevant', 'fake_rant', 'inappropriate']
+        class_probs = [random.uniform(0.05, 0.25) for _ in labels]
+        
+        # Boost probability of the predicted class
+        if bart_prediction in labels:
+            pred_idx = labels.index(bart_prediction)
+            class_probs[pred_idx] = random.uniform(0.4, 0.7)
+        
+        # Normalize probabilities
+        total_prob = sum(class_probs)
+        class_probs = [p / total_prob for p in class_probs]
+        
+        # Generate risk scores
+        p_bad_score = random.uniform(0.1, 0.9)
+        if prediction == 'genuine':
+            p_bad_score = random.uniform(0.1, 0.4)
+        elif prediction == 'high-confidence-spam':
+            p_bad_score = random.uniform(0.6, 0.9)
+        
+        metadata_anomaly = random.uniform(0.0, 1.0)
+        fusion_score = (p_bad_score + metadata_anomaly + (1 - confidence)) / 3
+        
+        result = {
+            'text': text,
+            'bart_prediction': bart_prediction,
+            'bart_confidence': random.uniform(0.6, 0.9),
+            'p_bad_score': p_bad_score,
+            'metadata_anomaly_score': metadata_anomaly,
+            'final_prediction': prediction,
+            'final_confidence': confidence,
+            'fusion_score': fusion_score,
+            'routing_decision': routing_map[prediction],
+            'class_probabilities': dict(zip(labels, class_probs)),
+            'demo_mode': True,
+            'routing_description': {
+                'automatic-approval': 'This review can be automatically approved for publication.',
+                'requires-manual-verification': 'This review requires human verification before publication.',
+                'automatic-rejection': 'This review should be automatically rejected.'
+            }[routing_map[prediction]],
+            'stage_analysis': {
+                'stage1_bart': {
+                    'prediction': bart_prediction,
+                    'confidence': random.uniform(0.6, 0.9),
+                    'description': 'BART model classification of review content (Demo Mode)'
+                },
+                'stage2_metadata': {
+                    'anomaly_score': metadata_anomaly,
+                    'description': 'Behavioral pattern and metadata analysis (Demo Mode)'
+                },
+                'stage3_fusion': {
+                    'final_prediction': prediction,
+                    'final_confidence': confidence,
+                    'fusion_score': fusion_score,
+                    'description': 'Advanced fusion model combining all signals (Demo Mode)'
+                }
+            }
+        }
+        
+        if error:
+            result['error'] = error
+            
+        self._update_stats(prediction)
+        return result
+    
+    def _convert_bart_result_to_app_format(self, bart_result: Dict, text: str, metadata: Optional[Dict] = None) -> Dict:
+        """Convert BART classifier result to app format"""
+        bart_prediction = bart_result['prediction']
+        bart_confidence = bart_result['confidence']
+        p_bad_score = bart_result['p_bad']
+        
+        # Map BART predictions to final predictions
+        final_prediction_map = {
+            'genuine_positive': 'genuine',
+            'genuine_negative': 'genuine',
+            'spam': 'high-confidence-spam',
+            'advertisement': 'suspicious',
+            'irrelevant': 'low-quality',
+            'fake_rant': 'suspicious',
+            'inappropriate': 'high-confidence-spam'
+        }
+        
+        final_prediction = final_prediction_map.get(bart_prediction, 'suspicious')
+        
+        # Generate routing decision based on prediction
+        routing_map = {
+            'genuine': 'automatic-approval',
+            'suspicious': 'requires-manual-verification',
+            'low-quality': 'requires-manual-verification',
+            'high-confidence-spam': 'automatic-rejection'
+        }
+        
+        routing_decision = routing_map[final_prediction]
+        
+        # Generate routing description
+        routing_descriptions = {
+            'automatic-approval': 'This review can be automatically approved for publication.',
+            'requires-manual-verification': 'This review requires human verification before publication.',
+            'automatic-rejection': 'This review should be automatically rejected.'
+        }
+        
+        result = {
+            'text': text,
+            'bart_prediction': bart_prediction,
+            'bart_confidence': bart_confidence,
+            'p_bad_score': p_bad_score,
+            'metadata_anomaly_score': 0.3,  # Default value
+            'final_prediction': final_prediction,
+            'final_confidence': bart_confidence,
+            'fusion_score': (p_bad_score + 0.3) / 2,  # Simple fusion
+            'routing_decision': routing_decision,
+            'routing_description': routing_descriptions[routing_decision],
+            'class_probabilities': bart_result['class_probabilities'],
+            'stage_analysis': {
+                'stage1_bart': {
+                    'prediction': bart_prediction,
+                    'confidence': bart_confidence,
+                    'description': f'BART model classification ({bart_result["model_type"]})'
+                },
+                'stage2_metadata': {
+                    'anomaly_score': 0.3,
+                    'description': 'Simplified metadata analysis (fallback mode)'
+                },
+                'stage3_fusion': {
+                    'final_prediction': final_prediction,
+                    'final_confidence': bart_confidence,
+                    'fusion_score': (p_bad_score + 0.3) / 2,
+                    'description': 'Simplified fusion combining BART and basic heuristics'
+                }
+            }
+        }
+        
+        return result
+    
+    def _update_stats(self, prediction: str):
+        """Update application statistics"""
+        self.stats['total_processed'] += 1
+        if prediction == 'genuine':
+            self.stats['genuine_count'] += 1
+        elif prediction == 'suspicious':
+            self.stats['suspicious_count'] += 1
+        elif prediction == 'low-quality':
+            self.stats['low_quality_count'] += 1
+        elif prediction == 'high-confidence-spam':
+            self.stats['spam_count'] += 1
+        
+        self.stats['last_updated'] = datetime.now().isoformat()
+    
+    def _generate_detailed_batch_stats(self, results: List[Dict]) -> Dict:
+        """Generate detailed statistics for batch processing"""
+        if not results:
+            return {}
+        
+        # Filter out error results
+        valid_results = [r for r in results if not r.get('error')]
+        
+        if not valid_results:
+            return {}
+        
+        # BART prediction breakdown
+        bart_predictions = {}
+        for result in valid_results:
+            bart_pred = result.get('bart_prediction', 'unknown')
+            bart_predictions[bart_pred] = bart_predictions.get(bart_pred, 0) + 1
+        
+        # Confidence distribution
+        confidences = [r.get('final_confidence', 0) for r in valid_results]
+        confidence_bins = {
+            'high': len([c for c in confidences if c >= 0.9]),
+            'good': len([c for c in confidences if 0.8 <= c < 0.9]),
+            'medium': len([c for c in confidences if 0.7 <= c < 0.8]),
+            'low': len([c for c in confidences if c < 0.7])
+        }
+        
+        # Risk score distribution
+        risk_scores = [r.get('p_bad_score', 0) for r in valid_results]
+        risk_bins = {
+            'very_low': len([r for r in risk_scores if r < 0.2]),
+            'low': len([r for r in risk_scores if 0.2 <= r < 0.4]),
+            'medium': len([r for r in risk_scores if 0.4 <= r < 0.6]),
+            'high': len([r for r in risk_scores if 0.6 <= r < 0.8]),
+            'very_high': len([r for r in risk_scores if r >= 0.8])
+        }
+        
+        # Routing decisions
+        routing_decisions = {}
+        for result in valid_results:
+            routing = result.get('routing_decision', 'unknown')
+            routing_decisions[routing] = routing_decisions.get(routing, 0) + 1
+        
+        return {
+            'bart_predictions': bart_predictions,
+            'confidence_distribution': confidence_bins,
+            'risk_distribution': risk_bins,
+            'routing_decisions': routing_decisions,
+            'total_valid': len(valid_results),
+            'total_errors': len(results) - len(valid_results)
+        }
+    
+    def get_stats(self) -> Dict:
+        """Get current application statistics"""
+        total = max(1, self.stats['total_processed'])  # Avoid division by zero
+        return {
+            **self.stats,
+            'genuine_percentage': round((self.stats['genuine_count'] / total) * 100, 1),
+            'flagged_percentage': round(((total - self.stats['genuine_count']) / total) * 100, 1)
+        }
 
-def generate_sample_violations():
-    """Generate sample violation data for demonstration"""
-    sample_data = {
-        'Date': [
-            datetime.now() - timedelta(days=i) for i in range(1, 11)
-        ],
-        'Type': [
-            'Spam Detection', 'Fake Reviews', 'Policy Violations', 'Content Violations',
-            'User Behavior Issues', 'Spam Detection', 'Fake Reviews', 'Policy Violations',
-            'Content Violations', 'User Behavior Issues'
-        ],
-        'Description': [
-            'Multiple spam reviews detected from same IP',
-            'Coordinated fake positive reviews',
-            'Review content violates community guidelines',
-            'Inappropriate language in review',
-            'Suspicious reviewer account activity',
-            'Promotional content in reviews',
-            'Review bombing detected',
-            'Off-topic review content',
-            'Harassment in review comments',
-            'Bot-like posting patterns'
-        ],
-        'Severity': ['High', 'High', 'Medium', 'Low', 'Medium', 'High', 'High', 'Low', 'Medium', 'Medium'],
-        'Status': ['Open', 'In Review', 'Open', 'Resolved', 'In Review', 'Open', 'Escalated', 'Resolved', 'Open', 'In Review'],
-        'Business': [
-            'Restaurant ABC', 'Hotel XYZ', 'Tech Store', 'Cafe Luna', 'Auto Shop',
-            'Restaurant ABC', 'Shopping Mall', 'Service Co', 'Healthcare Plus', 'Tech Store'
-        ]
-    }
-    
-    return pd.DataFrame(sample_data)
+# Initialize the guardian
+guardian = SmartReviewGuardian()
 
-def apply_violation_filters(df, severity_filter, violation_types, status_filter):
-    """Apply filters to violation data"""
-    filtered = df.copy()
-    
-    if severity_filter:
-        filtered = filtered[filtered['Severity'].isin(severity_filter)]
-    
-    if violation_types:
-        filtered = filtered[filtered['Type'].isin(violation_types)]
-    
-    if status_filter:
-        filtered = filtered[filtered['Status'].isin(status_filter)]
-    
-    return filtered
+@app.route('/')
+def dashboard():
+    """Main dashboard page"""
+    return render_template('dashboard.html', stats=guardian.get_stats())
 
-if __name__ == "__main__":
-    main()
+@app.route('/upload')
+def upload_page():
+    """Upload and batch analysis page"""
+    return render_template('upload.html')
+
+@app.route('/analyze')
+def analyze_page():
+    """Single review analysis page"""
+    return render_template('analyze.html')
+
+@app.route('/policy')
+def policy_page():
+    """Policy violation dashboard page"""
+    return render_template('policy.html')
+
+@app.route('/api/predict', methods=['POST'])
+def api_predict():
+    """API endpoint for single review prediction"""
+    try:
+        data = request.get_json()
+        text = data.get('text', '').strip()
+        
+        if not text:
+            return jsonify({'error': 'Review text is required'}), 400
+        
+        metadata = data.get('metadata', {})
+        result = guardian.predict_single_review(text, metadata)
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        logger.error(f"API prediction error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/batch', methods=['POST'])
+def api_batch():
+    """API endpoint for batch review processing"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+        
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        # Read uploaded file
+        try:
+            if file.filename.endswith('.csv'):
+                df = pd.read_csv(file.stream)
+            elif file.filename.endswith('.json'):
+                data = json.load(file.stream)
+                df = pd.DataFrame(data if isinstance(data, list) else [data])
+            else:
+                return jsonify({'error': 'Unsupported file format. Use CSV or JSON.'}), 400
+        except Exception as e:
+            return jsonify({'error': f'File parsing error: {str(e)}'}), 400
+        
+        # Ensure required columns
+        if 'text' not in df.columns:
+            return jsonify({'error': 'File must contain a "text" column'}), 400
+        
+        # Check file size limits
+        if len(df) > 1000:
+            return jsonify({'error': 'File too large. Maximum 1000 reviews per batch.'}), 400
+        
+        # Process reviews
+        reviews_data = df.to_dict('records')
+        batch_results = guardian.process_batch_reviews(reviews_data)
+        
+        # Add processing metadata
+        batch_results['processing_info'] = {
+            'filename': file.filename,
+            'total_rows': len(df),
+            'processing_time': datetime.now().isoformat(),
+            'demo_mode': not guardian.predictor
+        }
+        
+        return jsonify(batch_results)
+    
+    except Exception as e:
+        logger.error(f"Batch processing error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/stats')
+def api_stats():
+    """API endpoint for application statistics"""
+    return jsonify(guardian.get_stats())
+
+@app.route('/api/export/<format>')
+def api_export(format):
+    """Export results in various formats"""
+    # This would export recent results - simplified for demo
+    if format == 'csv':
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(['timestamp', 'prediction', 'confidence'])
+        writer.writerow([datetime.now().isoformat(), 'demo', 0.85])
+        
+        output.seek(0)
+        return send_file(
+            io.BytesIO(output.getvalue().encode()),
+            mimetype='text/csv',
+            as_attachment=True,
+            download_name='review_analysis.csv'
+        )
+    
+    return jsonify({'error': 'Unsupported format'}), 400
+
+if __name__ == '__main__':
+    # Initialize the ML pipeline
+    guardian.initialize_predictor()
+    
+    # Ensure output directory exists
+    OUTPUT_PATH.mkdir(exist_ok=True)
+    
+    # Run the app
+    app.run(debug=True, host='0.0.0.0', port=5000)
