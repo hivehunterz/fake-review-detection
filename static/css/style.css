@@ -277,6 +277,11 @@ main {
     letter-spacing: 0.025em;
 }
 
+.bg-orange {
+    background-color: #ff8c00 !important;
+    color: white !important;
+}
+
 /* Chart Containers */
 .card canvas {
     max-height: 300px;

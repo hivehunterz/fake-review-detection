@@ -116,6 +116,32 @@
         </div>
     </div>
 
+    <!-- Demo Header Information -->
+    <div class="row mb-4" id="demoHeader" style="display: none;">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        🔍 TOP 10 REVIEWS WITH DETAILED PREDICTIONS
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-3">
+                        <h6><i class="fas fa-info-circle me-2"></i>Analysis Information</h6>
+                        <p class="mb-1"><strong>📁 Source:</strong> demo/demo_reviews.csv</p>
+                        <p class="mb-1"><strong>📊 Showing first 10 reviews out of 10 total</strong></p>
+                        <hr>
+                        <h6>🎯 PREDICTION LEGEND:</h6>
+                        <span class="badge bg-success me-2">✅ genuine</span> = Authentic review<br>
+                        <span class="badge bg-warning me-2">🟡 low_risk</span> = Likely genuine, minor concerns<br>
+                        <span class="badge bg-orange me-2">🟠 medium_risk</span> = Some suspicious patterns<br>
+                        <span class="badge bg-danger me-2">🔴 high_risk</span> = Likely fake/spam
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Results Summary -->
     <div class="row mb-4" id="resultsSummary" style="display: none;">
         <div class="col-12">
@@ -123,7 +149,7 @@
                 <div class="card-header">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-chart-bar me-2"></i>
-                        Analysis Summary
+                        🎯 UNIVERSAL REVIEW TESTING SUMMARY
                     </h5>
                 </div>
                 <div class="card-body">
@@ -131,25 +157,25 @@
                         <div class="col-md-3 mb-3">
                             <div class="text-center">
                                 <h3 class="text-primary" id="totalProcessed">0</h3>
-                                <small class="text-muted">Total Processed</small>
+                                <small class="text-muted">📊 Total Reviews</small>
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="text-center">
                                 <h3 class="text-success" id="genuineResults">0</h3>
-                                <small class="text-muted">Genuine</small>
+                                <small class="text-muted">🟢 Low Risk</small>
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="text-center">
-                                <h3 class="text-warning" id="flaggedResults">0</h3>
-                                <small class="text-muted">Flagged</small>
+                                <h3 class="text-danger" id="flaggedResults">0</h3>
+                                <small class="text-muted">🔴 High Risk</small>
                             </div>
                         </div>
                         <div class="col-md-3 mb-3">
                             <div class="text-center">
-                                <h3 class="text-info" id="avgConfidence">0%</h3>
-                                <small class="text-muted">Avg Confidence</small>
+                                <h3 class="text-warning" id="avgConfidence">0%</h3>
+                                <small class="text-muted">⚡ Average Risk Score</small>
                             </div>
                         </div>
                     </div>
@@ -184,14 +210,14 @@
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-hover" id="resultsDataTable">
-                            <thead class="table-light">
+                            <thead class="table-dark">
                                 <tr>
-                                    <th>Review Text</th>
-                                    <th>Prediction</th>
-                                    <th>Confidence</th>
-                                    <th>Risk Score</th>
-                                    <th>Action</th>
-                                    <th>Details</th>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 30%;">Review Text & Business</th>
+                                    <th style="width: 20%;">Stage 1 (BART)</th>
+                                    <th style="width: 15%;">Stage 2 (Metadata)</th>
+                                    <th style="width: 20%;">Stage 3 (Final Fusion)</th>
+                                    <th style="width: 10%;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="resultsTableBody">
@@ -370,26 +396,35 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showResults(data) {
+        // Show demo header
+        document.getElementById('demoHeader').style.display = 'block';
+        
         // Show summary
         const summary = data.summary;
         document.getElementById('totalProcessed').textContent = summary.total;
-        document.getElementById('genuineResults').textContent = summary.genuine;
-        document.getElementById('flaggedResults').textContent = summary.flagged_count || (summary.total - summary.genuine);
+        document.getElementById('genuineResults').textContent = summary.low_risk_percentage + '%';
+        document.getElementById('flaggedResults').textContent = summary.high_risk_percentage + '%';
         
-        // Calculate and display average confidence
-        const avgConf = summary.avg_confidence || 0;
-        document.getElementById('avgConfidence').textContent = Math.round(avgConf * 100) + '%';
+        // Display average risk score
+        const avgRisk = summary.avg_risk_score || 0;
+        document.getElementById('avgConfidence').textContent = avgRisk.toFixed(3);
         
         // Show processing info if available
         if (data.processing_info) {
             const processingInfo = document.createElement('div');
-            processingInfo.className = 'alert alert-info mt-3';
+            processingInfo.className = 'alert alert-success mt-3';
             processingInfo.innerHTML = `
-                <h6><i class="fas fa-info-circle me-2"></i>Processing Information</h6>
-                <p class="mb-1"><strong>File:</strong> ${data.processing_info.filename}</p>
-                <p class="mb-1"><strong>Total Rows:</strong> ${data.processing_info.total_rows}</p>
-                <p class="mb-1"><strong>Mode:</strong> ${data.processing_info.demo_mode ? 'Demo Mode' : 'Production'}</p>
-                <p class="mb-0"><strong>Processed:</strong> ${data.processing_info.processing_time}</p>
+                <h6><i class="fas fa-check-circle me-2"></i>📂 Results saved to: demo_results/</h6>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>📁 Input File:</strong> ${data.processing_info.filename}</p>
+                        <p class="mb-1"><strong>📊 Total Reviews:</strong> ${data.processing_info.total_rows}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>⚡ Average Risk Score:</strong> ${avgRisk.toFixed(3)}</p>
+                        <p class="mb-0"><strong>🔴 High Risk:</strong> ${summary.high_risk_percentage}% | <strong>🟢 Low Risk:</strong> ${summary.low_risk_percentage}%</p>
+                    </div>
+                </div>
             `;
             document.getElementById('resultsSummary').appendChild(processingInfo);
         }
@@ -410,6 +445,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function hideResults() {
+        document.getElementById('demoHeader').style.display = 'none';
         document.getElementById('resultsSummary').style.display = 'none';
         document.getElementById('resultsTable').style.display = 'none';
     }
@@ -428,38 +464,81 @@ document.addEventListener('DOMContentLoaded', function() {
         pageResults.forEach((result, index) => {
             const row = document.createElement('tr');
             
-            const predictionBadge = getPredictionBadge(result.final_prediction);
-            const actionBadge = getActionBadge(result.routing_decision);
-            const confidencePercent = Math.round(result.final_confidence * 100);
-            const riskPercent = Math.round(result.p_bad_score * 100);
+            const finalPredictionBadge = getFinalPredictionBadge(result.final_prediction);
+            const bartConfidencePercent = Math.round(result.bart_confidence * 100);
+            const finalConfidencePercent = Math.round(result.final_confidence * 100);
+            const riskPercent = Math.round(result.final_risk_score * 100);
+            const anomalyScore = Math.round(result.metadata_anomaly_score * 100);
             
             row.innerHTML = `
-                <td>
-                    <div class="text-truncate" style="max-width: 300px;" title="${result.text}">
-                        ${result.text}
-                    </div>
+                <td class="text-center">
+                    <strong>#${startIndex + index + 1}</strong>
                 </td>
-                <td>${predictionBadge}</td>
                 <td>
-                    <div class="d-flex align-items-center">
-                        <div class="progress me-2" style="width: 60px; height: 8px;">
-                            <div class="progress-bar" style="width: ${confidencePercent}%"></div>
+                    <div class="mb-2">
+                        <div class="text-truncate fw-bold" style="max-width: 250px;" title="${result.text}">
+                            📝 ${result.text}
                         </div>
-                        <small>${confidencePercent}%</small>
-                    </div>
-                </td>
-                <td>
-                    <div class="d-flex align-items-center">
-                        <div class="progress me-2" style="width: 60px; height: 8px;">
-                            <div class="progress-bar bg-warning" style="width: ${riskPercent}%"></div>
+                        <div class="text-muted small">
+                            ⭐ Rating: ${result.rating} | 🏢 ${result.business}
                         </div>
-                        <small>${riskPercent}%</small>
+                        <div class="text-muted small">🏷️ ${result.category}</div>
                     </div>
                 </td>
-                <td>${actionBadge}</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary" onclick="showDetailModal(${startIndex + index})">
+                    <div class="small">
+                        <div class="mb-1">
+                            📊 <strong>Classification:</strong><br>
+                            ${result.bart_classification} (${bartConfidencePercent}% conf)
+                        </div>
+                        <div class="mb-1">
+                            <strong>Binary:</strong> ${result.bart_binary}
+                        </div>
+                        <div class="text-warning">
+                            <strong>Quality Risk:</strong> ${Math.round(result.bart_quality_risk * 1000)/10}%
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="small">
+                        <div class="mb-1">
+                            📈 <strong>Anomaly Score:</strong><br>
+                            ${anomalyScore}%
+                        </div>
+                        <div class="mb-1">
+                            <strong>Risk Level:</strong> ${result.metadata_risk_level}
+                        </div>
+                        <div class="text-${result.metadata_is_anomaly ? 'danger' : 'success'}">
+                            <strong>Is Anomaly:</strong> ${result.metadata_is_anomaly}
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="small">
+                        <div class="mb-2">
+                            🎯 ${finalPredictionBadge}
+                        </div>
+                        <div class="mb-1">
+                            <strong>Confidence:</strong> ${finalConfidencePercent}%
+                            <div class="progress mt-1" style="height: 4px;">
+                                <div class="progress-bar bg-info" style="width: ${finalConfidencePercent}%"></div>
+                            </div>
+                        </div>
+                        <div class="text-warning">
+                            <strong>Risk Score:</strong> ${riskPercent}%
+                            <div class="progress mt-1" style="height: 4px;">
+                                <div class="progress-bar bg-warning" style="width: ${riskPercent}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary mb-1" onclick="showDetailModal(${startIndex + index})" title="View Details">
                         <i class="fas fa-eye"></i>
+                    </button>
+                    <br>
+                    <button class="btn btn-sm btn-outline-success" onclick="approveReview(${startIndex + index})" title="Approve">
+                        <i class="fas fa-check"></i>
                     </button>
                 </td>
             `;
@@ -473,6 +552,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Update counts
         document.getElementById('showingCount').textContent = pageResults.length;
         document.getElementById('totalCount').textContent = filteredResults.length;
+    }
+
+    function getFinalPredictionBadge(prediction) {
+        const badges = {
+            'genuine': '<span class="badge bg-success">✅ GENUINE</span>',
+            'low_risk': '<span class="badge bg-warning">🟡 LOW_RISK</span>',
+            'medium_risk': '<span class="badge bg-orange">🟠 MEDIUM_RISK</span>',
+            'high_risk': '<span class="badge bg-danger">🔴 HIGH_RISK</span>'
+        };
+        return badges[prediction] || '<span class="badge bg-secondary">❓ UNKNOWN</span>';
     }
 
     function getPredictionBadge(prediction) {
@@ -493,6 +582,15 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         return badges[routing] || '<span class="badge bg-secondary">Unknown</span>';
     }
+
+    // Global functions for new functionality
+    window.approveReview = function(index) {
+        const result = processedResults[index];
+        if (confirm('Approve this review as genuine?')) {
+            // In a real app, this would make an API call
+            alert('Review approved: ' + result.text.substring(0, 50) + '...');
+        }
+    };
 
     function updatePagination(totalItems) {
         const totalPages = Math.ceil(totalItems / itemsPerPage);
