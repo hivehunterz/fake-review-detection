@@ -196,12 +196,10 @@ Routing: automatic-approval
 
 ### Prediction Categories:
 
-- ✅ **Genuine** (70%): High-quality, authentic reviews
-- 🟡 **Suspicious** (20%): Requires manual verification  
-- ⚠️ **Low-Quality** (10%): Poor quality but not spam
-- 🚫 **High-Confidence-Spam** (0%): Automatic rejection
-
-*Note: Distribution based on demo dataset with optimized thresholds. Actual distribution may vary by dataset.*
+- ✅ **Genuine** (30%): High-quality, authentic reviews
+- 🟡 **Suspicious** (47%): Requires manual verification  
+- ⚠️ **Low-Quality** (5%): Poor quality but not spam
+- 🚫 **High-Confidence-Spam** (18%): Automatic rejection
 
 ## 🔬 Technical Details
 
@@ -268,14 +266,6 @@ python demo.py
 - **Content Moderation**: Identify low-quality user content
 - **Market Research**: Extract genuine customer feedback
 - **Quality Assurance**: Automated review validation
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open Pull Request
 
 ## 📄 License
 
