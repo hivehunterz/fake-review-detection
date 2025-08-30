@@ -43,7 +43,7 @@ class GoogleReviewsLabeler:
         self.providers = [
             LLMProvider(
                 name="Groq Llama",
-                api_key=os.getenv('GROQ_API_KEY', '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'),
+                api_key=os.getenv('GROQ_API_KEY'),
                 base_url="https://api.groq.com/openai/v1/chat/completions",
                 model="llama-3.3-70b-versatile",  # Fast logical model first
                 max_tokens=1000,
@@ -52,7 +52,7 @@ class GoogleReviewsLabeler:
             ),
             LLMProvider(
                 name="Groq Mixtral",
-                api_key=os.getenv('GROQ_API_KEY', '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'),
+                api_key=os.getenv('GROQ_API_KEY'),
                 base_url="https://api.groq.com/openai/v1/chat/completions",
                 model="llama3-groq-70b-8192-tool-use-preview",  # Alternative model (replaced decommissioned mixtral)
                 max_tokens=1000,
@@ -61,7 +61,7 @@ class GoogleReviewsLabeler:
             ),
             LLMProvider(
                 name="OpenAI GPT-4",
-                api_key=os.getenv('OPENAI_API_KEY', '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'),
+                api_key=os.getenv('OPENAI_API_KEY'),
                 base_url="https://api.openai.com/v1/chat/completions",
                 model="gpt-4",  # Full GPT-4 as fallback only
                 max_tokens=1500,
@@ -70,7 +70,7 @@ class GoogleReviewsLabeler:
             ),
             LLMProvider(
                 name="OpenAI GPT-4-Turbo",
-                api_key=os.getenv('OPENAI_API_KEY', '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'),
+                api_key=os.getenv('OPENAI_API_KEY'),
                 base_url="https://api.openai.com/v1/chat/completions",
                 model="gpt-4-turbo",  # GPT-4 Turbo as final fallback
                 max_tokens=1500,
@@ -397,14 +397,13 @@ def main():
         # Initialize labeler
         labeler = GoogleReviewsLabeler()
         
-        # Configuration
-        json_file = "dataset (1).json"
+        # Configuration - Updated to use the correct test data file
+        json_file = "../data/data_test.json"
         
-        # Get user input for max reviews
-        max_input = input("Enter max number of reviews to process (or press Enter for ALL): ").strip()
-        max_reviews = int(max_input) if max_input else None
+        # Process ALL reviews by default
+        max_reviews = None  # None means process all reviews
         
-        print(f"\\nProcessing up to {max_reviews if max_reviews else 'ALL'} reviews from {json_file}...")
+        print(f"\\nProcessing ALL reviews from {json_file}...")
         print(f"Active LLM providers: {[p.name for p in labeler.active_providers]}")
         
         # Process reviews

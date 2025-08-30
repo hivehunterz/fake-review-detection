@@ -1,0 +1,24 @@
+COMPREHENSIVE MODEL EVALUATION RESULTS\n==================================================\n\nDataset: 242 samples\n\nBART Classification Report:\n                  precision    recall  f1-score   support
+
+   advertisement       1.00      0.30      0.46        10
+       fake_rant       0.00      0.00      0.00        12
+genuine_negative       0.65      0.83      0.73        41
+genuine_positive       0.71      0.91      0.80       110
+   inappropriate       1.00      0.12      0.22         8
+      irrelevant       0.60      0.35      0.44        26
+            spam       0.57      0.49      0.52        35
+
+        accuracy                           0.68       242
+       macro avg       0.65      0.43      0.45       242
+    weighted avg       0.65      0.68      0.64       242
+\n\nFusion Model Classification Report:\n                      precision    recall  f1-score   support
+
+             genuine       0.63      0.98      0.77       151
+          suspicious       0.00      0.00      0.00        12
+         low-quality       0.00      0.00      0.00        26
+high-confidence-spam       0.00      0.00      0.00        53
+
+            accuracy                           0.61       242
+           macro avg       0.16      0.25      0.19       242
+        weighted avg       0.39      0.61      0.48       242
+\n

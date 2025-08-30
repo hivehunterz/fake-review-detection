@@ -59,17 +59,31 @@ Thumbs.db
 *.safetensors
 enhanced_bart_review_classifier_*/
 fine_tuned_bart_review_classifier_*/
+models/
+checkpoints/
+*.ckpt
+*.h5
+*.hdf5
 
 # API Keys (IMPORTANT: Never commit these)
 *api_key*
 *.key
 config.ini
+*.env
+.env.*
 
-# Large datasets
+# Large datasets and data files
 *.json
 *.csv
+*.tsv
+*.xlsx
+*.xls
+data/
 dataset*
 *labeled*
+output/
+results/
+embeddings/
 
 # Logs
 *.log

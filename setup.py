@@ -14,7 +14,7 @@ setup(
     description="Advanced Fake Review Detection System using BART and Multi-LLM Labeling",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/fake-review-detection",
+    url="https://github.com/hivehunterz/fake-review-detection",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",

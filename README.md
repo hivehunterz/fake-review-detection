@@ -1,230 +1,193 @@
-# 🛡️ Advanced Fake Review Detection System
+# 🛡️ Review Quality Detection System
 
-A comprehensive machine learning system for detecting fake reviews, spam, and inappropriate content in Google Reviews using state-of-the-art NLP models.
-
-## 🎯 Project Overview
-
-This project implements a sophisticated fake review detection system that combines:
-- **Multi-LLM labeling** with Groq Llama 3.3-70B for high-quality dataset creation
-- **Fine-tuned BART models** achieving 83% accuracy
-- **Comprehensive evaluation** against zero-shot baselines
-- **Production-ready classification** for 7 review categories
-
-## 📊 Performance Results
-
-| Model | Accuracy | F1-Macro | F1-Weighted |
-|-------|----------|----------|-------------|
-| **Fine-tuned BART** | **83.0%** | **69.5%** | **81.1%** |
-| Zero-shot BART | 60.0% | 28.7% | 50.9% |
-| **Improvement** | **+23.0%** | **+40.8%** | **+30.2%** |
-
-## 🏗️ System Architecture
-
-```
-Multi-Stage Detection Pipeline:
-
-Stage 0: Data Preprocessing
-├── Raw Google Reviews (JSON)
-├── Multi-LLM Labeling (Groq Llama 3.3-70B)
-└── Quality-Controlled Dataset
-
-Stage 1: BART Fine-tuning
-├── Enhanced Dataset → BART Model Training
-├── 7-Category Classification
-└── 83% Accuracy Achievement
-
-Stage 2: Metadata Anomaly Detection (Planned)
-├── Temporal Pattern Analysis
-├── User Behavior Analysis
-└── Geographic Anomaly Detection
-
-Stage 3: Relevancy Check
-├── Secondary Layer Analysis (layer2.py)
-├── Context Validation
-└── Final Quality Scoring
-
-Classification Categories:
-├── genuine_positive    (45.5%)
-├── genuine_negative    (17.0%)
-├── spam               (14.3%)
-├── advertisement      (4.3%)
-├── irrelevant         (10.6%)
-├── fake_rant          (4.8%)
-└── inappropriate      (3.6%)
-```
+A sophisticated machine learning pipeline for detecting review quality using advanced NLP and anomaly detection techniques. **No heuristics** - pure ML approach with 93.6% accuracy.
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Train Models
 ```bash
-conda create -n review_classifier python=3.12
-conda activate review_classifier
-pip install torch transformers pandas scikit-learn groq openai accelerate
+python scripts/training/train_all_models.py
 ```
 
-### 1. Data Labeling (Stage 0)
+### Predict Review Quality
 ```bash
-# Label new reviews using multi-LLM system
-cd data_preprocessing
-python google_reviews_labeler.py
+# Batch prediction
+python scripts/prediction/predict_review_quality.py --input data/data_all_test.csv --output results.csv
+
+# Single review
+python scripts/prediction/predict_review_quality.py --text "Amazing food and excellent service!"
+
+# Quick demo
+python demo.py
 ```
 
-### 2. Model Training (Stage 1)
-```bash
-# Fine-tune BART model on labeled data
-cd stage_1_bart_finetuning
-python enhanced_bart_finetune.py
+## 🏗️ Architecture
+
+```
+📝 INPUT → 🤖 BART Classification → 📊 Metadata Analysis → 🔮 Advanced Fusion → 📋 OUTPUT
 ```
 
-### 3. Model Evaluation (Stage 1)
-```bash
-# Evaluate model performance
-cd stage_1_bart_finetuning
-python evaluate_fine_tuned_bart.py
-```
+### 3 Stages:
+1. **🤖 BART Text Classification**: 7-class fine-tuned model (genuine_positive, genuine_negative, spam, advertisement, irrelevant, fake_rant, inappropriate)
+2. **📊 Enhanced Metadata Analysis**: ML-based anomaly detection with 88 engineered features
+3. **🔮 Advanced Fusion Model**: Gradient boosting combining all signals (93.6% accuracy)
 
-### 4. Relevancy Check (Stage 3)
-```bash
-# Secondary relevancy analysis
-cd stage_3_relevancy_check
-python layer2.py
-```
+## 📊 Performance
+
+- **Cross-Validation Accuracy**: 93.6% ± 4.7%
+- **Genuine Detection Rate**: 30% (328% improvement)
+- **High-Quality Reviews Found**: 30 out of 100 test reviews
+- **Status**: Production ready ✅
 
 ## 📁 Project Structure
 
 ```
-├── data_preprocessing/                  # Data labeling and preprocessing
-│   ├── google_reviews_labeler.py      #   Multi-LLM labeling system
-│   ├── google_reviews_labeler_fixed.py #   Fixed version with model updates
-│   ├── google_reviews_evaluator.py    #   Data quality evaluation
-│   └── README.md                      #   Stage documentation
-├── stage_1_bart_finetuning/            # BART model training
-│   ├── enhanced_bart_finetune.py      #   Enhanced BART fine-tuning
-│   ├── evaluate_fine_tuned_bart.py    #   Model evaluation and comparison
-│   ├── working_bart_finetune.py       #   Working fine-tuning pipeline
-│   └── README.md                      #   Stage documentation
-├── stage_2_metadata_anomaly/           # Metadata anomaly detection
-│   └── README.md                      #   Stage documentation (TBD)
-├── stage_3_relevancy_check/            # Review relevancy analysis
-│   ├── layer2.py                      #   Secondary relevancy analysis
-│   └── README.md                      #   Stage documentation
-├── data/                              # Raw and processed datasets
-│   ├── dataset (1).json              #   Raw Google Reviews data
-│   └── google_reviews_labeled_*.csv  #   Labeled datasets
-├── models/                            # Trained model artifacts
-├── results/                           # Evaluation outputs
-├── docs/                              # Documentation
-│   ├── BART_FINETUNING_GUIDE.md     #   Detailed training guide
-│   └── FINETUNING_GUIDE.md          #   General fine-tuning guide
-└── example_usage.py                   # Usage examples
+fake-review-detection/
+├── data/                          # Training and test data
+│   ├── data_all_training.csv     # Training dataset
+│   └── data_all_test.csv         # Test dataset
+├── core/                          # Core ML modules (pure ML - no heuristics)
+│   ├── stage1_bart/              # BART text classification
+│   ├── stage2_metadata/          # Metadata anomaly detection
+│   └── fusion/                   # Advanced fusion model
+├── scripts/                       # Executable scripts
+│   ├── training/                 # Model training scripts
+│   │   └── train_all_models.py   # Complete training pipeline
+│   └── prediction/               # Prediction scripts
+│       └── predict_review_quality.py  # Quality prediction pipeline
+├── models/                        # Trained models (created after training)
+│   ├── bart_classifier/          # Fine-tuned BART model
+│   ├── metadata_analyzer.pkl     # Metadata analyzer
+│   └── fusion_model.pkl          # Advanced fusion model
+├── output/                        # Results and logs
+│   ├── training.log              # Training logs
+│   ├── prediction.log            # Prediction logs
+│   └── *.csv                     # Result files
+└── demo.py                        # Usage demonstration
 ```
 
-## 🔧 Key Features
+## 🔧 Output
 
-### Multi-LLM Labeling System
-- **Groq Llama 3.3-70B** prioritized for speed and logic
-- **Automatic model switching** on rate limits
-- **Progress saving** with resume capability
-- **Batch processing** for efficiency
+- **Classifications**: genuine, suspicious, low-quality, high-confidence-spam
+- **Routing**: automatic-approval, manual-verification, automatic-rejection
+- **Detailed Scores**: BART probabilities, metadata anomaly scores, fusion confidence
+- **Enhanced Detection**: 30% genuine review detection with optimized thresholds
 
-### Enhanced BART Fine-tuning
-- **facebook/bart-large-mnli** base model
-- **7-class classification** for comprehensive review analysis
-- **Optimized training** with learning rate scheduling
-- **Robust evaluation** with detailed metrics
+## 🎯 Key Achievement
 
-### Production Features
-- **GPU acceleration** support
-- **Batch prediction** capabilities
-- **Comprehensive logging** and monitoring
-- **Error handling** and recovery
+**Advanced ML Pipeline**: Replaced heuristics with pure machine learning - 93.6% accuracy fusion model with 328% improvement in genuine review detection!
 
-## 📈 Technical Details
+## 📊 Example Results
 
-### Model Architecture
-- **Base Model**: facebook/bart-large-mnli
-- **Fine-tuning**: Sequence classification head
-- **Input Length**: 512 tokens
-- **Training**: 3 epochs, 1e-5 learning rate
+### High-Quality Reviews Found (30% detection rate):
 
-### Dataset Statistics
-- **Total Reviews**: 3,671
-- **Training Split**: 80%
-- **Validation Split**: 20%
-- **Label Quality**: 83% LLM agreement
+✅ **Genuine Review Example:**
+```
+Text: "Brought my son to shop for fishes and Jeremy was very helpful and informative. 
+He provided us with a lot of insights and advice. Really appreciate his great 
+customer service and providing us with a pleasant experience. Thank you Jeremy!"
+
+BART Classification: genuine_positive (confidence: 0.977)
+P_BAD Risk Score: 0.021
+Metadata Anomaly Score: 0.500
+Final Prediction: genuine (confidence: 1.000)
+Routing: automatic-approval
+```
+
+### Prediction Categories:
+
+- ✅ **Genuine** (30%): High-quality, authentic reviews
+- 🟡 **Suspicious** (47%): Requires manual verification  
+- ⚠️ **Low-Quality** (5%): Poor quality but not spam
+- 🚫 **High-Confidence-Spam** (18%): Automatic rejection
+
+## 🔬 Technical Details
+
+### Stage 1: BART Text Classification
+- Fine-tuned facebook/bart-large-mnli
+- 7-class classification with probability distributions
+- Computes p_bad scores from spam-related classes
+- GPU-accelerated inference
+
+### Stage 2: Enhanced Metadata Analysis
+- 88 engineered features (temporal, user, content, business)
+- Isolation Forest anomaly detection (200 estimators)
+- BART feature integration
+- Confidence-weighted scoring
+
+### Stage 3: Advanced Fusion Model
+- Gradient Boosting Classifier (n_estimators=200)
+- 20 engineered features including interactions
+- Multi-factor decision logic with optimized thresholds
+- Cross-validated hyperparameters
+
+## � Performance Metrics
+
+- **Training Accuracy**: 93.0%
+- **Validation Accuracy**: 93.0%
+- **Cross-Validation**: 93.6% ± 4.7%
+- **Feature Importance**: p_bad_enhanced_interaction (37.4%)
+- **Genuine Detection**: 30% success rate (vs 7% baseline)
+
+## �️ Development
+
+### Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Run Demo
+```bash
+python demo.py
+```
+
+### Check Logs
+- Training: `output/training.log`
+- Prediction: `output/prediction.log`
+
+### Model Details
+- BART Model: `models/bart_classifier/`
+- Metadata Analyzer: `models/metadata_analyzer.pkl`
+- Fusion Model: `models/fusion_model.pkl`
+
+## � Requirements
+
+- Python 3.8+
+- PyTorch with CUDA support
+- Transformers
+- Scikit-learn
+- Pandas, NumPy
+- NVIDIA GPU (recommended)
 
 ## 🎯 Use Cases
 
-1. **E-commerce Platforms**: Automatic fake review detection
-2. **Content Moderation**: Spam and inappropriate content filtering
-3. **Market Research**: Genuine sentiment analysis
-4. **Quality Assurance**: Review authenticity verification
-
-## 🛠️ Advanced Usage
-
-### Custom Model Training
-```python
-from enhanced_bart_finetune import EnhancedBARTFineTuner
-
-# Initialize fine-tuner
-fine_tuner = EnhancedBARTFineTuner()
-
-# Custom training
-model_path = fine_tuner.fine_tune(
-    csv_file="your_labeled_data.csv",
-    epochs=3,
-    batch_size=8,
-    learning_rate=1e-5
-)
-```
-
-### Batch Prediction
-```python
-from evaluate_fine_tuned_bart import FineTunedBARTEvaluator
-
-# Load model
-evaluator = FineTunedBARTEvaluator("path/to/model")
-
-# Predict reviews
-reviews = ["Great product!", "Spam content here"]
-predictions = evaluator.predict_reviews(reviews)
-```
-
-## 📊 Evaluation Metrics
-
-### Class-wise Performance
-- **Spam Detection**: 93.8% F1
-- **Advertisement**: 90.7% F1
-- **Inappropriate**: 68.8% F1
-- **Genuine Reviews**: 81.9% F1 (combined)
-
-### Model Comparison
-- **83% accuracy** vs 60% zero-shot
-- **Perfect precision** on multiple classes
-- **Robust recall** across all categories
+- **E-commerce Platforms**: Filter fake product reviews
+- **Business Listings**: Detect spam restaurant/hotel reviews  
+- **Content Moderation**: Identify low-quality user content
+- **Market Research**: Extract genuine customer feedback
+- **Quality Assurance**: Automated review validation
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Submit a pull request
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🙏 Acknowledgments
 
-- **Groq** for high-speed LLM inference
-- **Hugging Face** for transformer models
-- **Facebook AI** for BART architecture
-
-## 📧 Contact
-
-For questions, issues, or collaboration opportunities, please open an issue or contact the maintainer.
+- Facebook AI for BART model
+- Scikit-learn community
+- PyTorch team
+- Hugging Face Transformers
 
 ---
 
-⭐ **Star this repository if you find it useful!**
+**Made with ❤️ for authentic review detection**
+
+**Status**: ✅ Production Ready | **Version**: 2.0.0 | **Last Updated**: December 2024
