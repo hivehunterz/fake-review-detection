@@ -527,7 +527,89 @@ class UniversalReviewTester:
         self.save_results(df, report, input_file)
         
         logger.info("✅ Universal Review Testing Pipeline Complete!")
+        
+        # Print top 10 reviews with predictions
+        self.print_top_reviews_with_predictions(df, input_file)
+        
         return report
+    
+    def print_top_reviews_with_predictions(self, df: pd.DataFrame, input_file: str, top_n: int = 10):
+        """Print top N reviews with all predictions in a readable format"""
+        print("\n" + "🔍 TOP 10 REVIEWS WITH DETAILED PREDICTIONS")
+        print("=" * 80)
+        print(f"📁 Source: {input_file}")
+        print(f"📊 Showing first {min(top_n, len(df))} reviews out of {len(df)} total")
+        print("=" * 80)
+        
+        for i, (idx, row) in enumerate(df.head(top_n).iterrows()):
+            print(f"\n📄 REVIEW #{i+1}")
+            print("-" * 50)
+            
+            # Review text (truncated)
+            text = row.get('text', 'N/A')
+            if len(text) > 150:
+                text = text[:150] + "..."
+            print(f"📝 Text: {text}")
+            
+            # Basic info
+            if 'rating' in row and not pd.isna(row['rating']):
+                print(f"⭐ Rating: {row['rating']}")
+            if 'business_name' in row and not pd.isna(row['business_name']):
+                print(f"🏢 Business: {row['business_name']}")
+            if 'category' in row and not pd.isna(row['category']):
+                print(f"🏷️ Category: {row['category']}")
+            
+            print(f"\n🤖 STAGE-BY-STAGE PREDICTIONS:")
+            
+            # Stage 1: BART
+            if 'bart_classification' in row:
+                bart_class = row['bart_classification']
+                bart_conf = row.get('bart_confidence', 0)
+                bart_binary = row.get('bart_binary', 'unknown')
+                bart_risk = row.get('bart_quality_risk', 0)
+                
+                print(f"  📊 Stage 1 (BART):")
+                print(f"    • Classification: {bart_class} ({bart_conf:.3f} confidence)")
+                print(f"    • Binary: {bart_binary}")
+                print(f"    • Quality Risk: {bart_risk:.3f}")
+            
+            # Stage 2: Metadata
+            if 'metadata_anomaly_score' in row:
+                meta_score = row['metadata_anomaly_score']
+                meta_risk = row.get('metadata_risk_level', 'unknown')
+                meta_anomaly = row.get('metadata_is_anomaly', False)
+                
+                print(f"  📈 Stage 2 (Metadata):")
+                print(f"    • Anomaly Score: {meta_score:.3f}")
+                print(f"    • Risk Level: {meta_risk}")
+                print(f"    • Is Anomaly: {meta_anomaly}")
+            
+            # Stage 3: Fusion (Final)
+            if 'fusion_prediction' in row:
+                fusion_pred = row['fusion_prediction']
+                fusion_conf = row.get('fusion_confidence', 0)
+                fusion_risk = row.get('fusion_risk_score', 0)
+                
+                # Choose emoji based on prediction
+                pred_emoji = {
+                    'genuine': '✅',
+                    'low_risk': '🟡',
+                    'medium_risk': '🟠',
+                    'high_risk': '🔴'
+                }.get(fusion_pred, '❓')
+                
+                print(f"  🎯 Stage 3 (Final Fusion):")
+                print(f"    • {pred_emoji} FINAL PREDICTION: {fusion_pred.upper()}")
+                print(f"    • Confidence: {fusion_conf:.3f}")
+                print(f"    • Risk Score: {fusion_risk:.3f}")
+        
+        print("\n" + "=" * 80)
+        print("🎯 PREDICTION LEGEND:")
+        print("✅ genuine = Authentic review")
+        print("🟡 low_risk = Likely genuine, minor concerns")
+        print("🟠 medium_risk = Some suspicious patterns")
+        print("🔴 high_risk = Likely fake/spam")
+        print("=" * 80)
 
 def main():
     """Main function for command line usage"""

@@ -1,6 +1,91 @@
 # 🛡️ Review Quality Detection System
 
-A sophisticated machine learning pipeline for detecting review quality using advanced NLP and anomaly detection techniques. **No heuristics** - pure ML approach with 93.6% accuracy.
+A sophisticated machine learning pipeline for detecting review quality using advanced NLP and anomaly detection## ⚠️ Limitations
+
+### Language Support
+- **English Only**: The system is currently trained and optimized for English reviews only
+- **Non-English Content**: Reviews in other languages (Chinese, Malay, Tamil, etc.) may not be accurately classified
+- **Mixed Language**: Reviews containing multiple languages may produce unreliable results
+
+### Geographic Context
+- **Singapore-Specific Training**: The training data was primarily scraped from Singapore-based businesses and platforms
+- **Local Context Advantage**: The model performs better on reviews with Singapore/Southeast Asian context, terminology, and cultural references
+- **Global Applicability**: Performance may vary when applied to reviews from other regions due to different:
+  - Cultural expressions and review patterns
+  - Local business practices and expectations
+  - Regional slang and terminology
+  - Different spam/fake review tactics
+
+### Recommendations
+- **Regional Adaptation**: For optimal performance in other regions, consider retraining with local data
+- **Language Extension**: Additional training required for non-English language support
+- **Cultural Calibration**: Model thresholds may need adjustment for different cultural contexts
+
+> 📋 **For detailed limitations and regional considerations, see [LIMITATIONS.md](LIMITATIONS.md)**
+
+## 🛠️ Key Scripts for Testing
+
+### 🚀 Universal Review Tester
+**File**: `scripts/evaluation/universal_review_tester.py`
+**Purpose**: Test ANY CSV file with review data - complete pipeline analysis with detailed predictions
+**Usage**:
+```bash
+python scripts/evaluation/universal_review_tester.py --input your_file.csv --text_column review_text --output results
+```
+**Features**: 
+- ✅ Stage-by-stage analysis (BART → Metadata → Fusion)
+- ✅ Detailed predictions with confidence scores
+- ✅ Visual emoji indicators (✅🟡🟠🔴)
+- ✅ Comprehensive CSV/JSON reports
+- ✅ Automatic visualizations
+
+### 🎯 Demo Dataset
+**File**: `demo_reviews.csv`
+**Purpose**: 10 diverse review examples for instant testing
+**Content**: Genuine positive/negative, spam, fake enthusiastic, technical reviews
+**Usage**: Already tested - check `demo_results/` for complete analysis
+
+### 📊 Binary Evaluation System (76.9% Accuracy)
+**File**: `scripts/evaluation/binary_evaluation.py`
+**Purpose**: Evaluate genuine vs non-genuine classification performance
+**Achievement**: 76.9% accuracy, 77.4% ROC AUC for binary classification
+**Usage**:
+```bash
+python scripts/evaluation/binary_evaluation.py
+```
+
+### 🤖 Quick Single Review Test
+**File**: `scripts/prediction/predict_review_quality.py`
+**Purpose**: Test single reviews instantly
+**Usage**:
+```bash
+python scripts/prediction/predict_review_quality.py --text "Your review text here"
+```
+
+### 🎮 Simple Demo
+**File**: `demo.py`
+**Purpose**: Instant demonstration with pre-loaded examples
+**Usage**:
+```bash
+python demo.py
+```
+
+### 📈 Model Training
+**File**: `scripts/training/train_all_models.py`
+**Purpose**: Train all models from scratch (BART + Metadata + Fusion)
+**Usage**:
+```bash
+python scripts/training/train_all_models.py
+```
+
+## 📋 Requirements
+
+- Python 3.8+
+- PyTorch with CUDA support
+- Transformers
+- Scikit-learn
+- Pandas, NumPy
+- NVIDIA GPU (recommended)ues. **No heuristics** - pure ML approach with 93.6% accuracy.
 
 ## 🚀 Quick Start
 
@@ -37,7 +122,7 @@ python demo.py
 - **Cross-Validation Accuracy**: 93.6% ± 4.7%
 - **Genuine Detection Rate**: 30% (328% improvement)
 - **High-Quality Reviews Found**: 30 out of 100 test reviews
-- **Status**: Production ready ✅
+- **Binary Classification**: 76.9% accuracy for genuine vs non-genuine detection
 
 ## 📁 Project Structure
 
@@ -190,4 +275,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for authentic review detection**
 
-**Status**: ✅ Production Ready | **Version**: 2.0.0 | **Last Updated**: December 2024
+**Version**: 2.0.0 | **Last Updated**: December 2024
