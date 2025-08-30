@@ -532,11 +532,6 @@ def policy_page():
     """Policy violation dashboard page"""
     return render_template('policy.html')
 
-@app.route('/insights')
-def insights_page():
-    """Insights and metrics page"""
-    return render_template('insights.html')
-
 @app.route('/api/predict', methods=['POST'])
 def api_predict():
     """API endpoint for single review prediction"""
@@ -609,41 +604,6 @@ def api_batch():
 def api_stats():
     """API endpoint for application statistics"""
     return jsonify(guardian.get_stats())
-
-@app.route('/api/insights')
-def api_insights():
-    """API endpoint for detailed insights and analytics"""
-    stats = guardian.get_stats()
-    
-    # Generate insights based on current statistics
-    insights = {
-        'detection_quality': {
-            'confidence_score': 'High' if stats['total_processed'] > 50 else 'Medium',
-            'sample_size': stats['total_processed'],
-            'reliability': 'Demo Mode' if not guardian.predictor else 'Production'
-        },
-        'trend_analysis': {
-            'genuine_rate': stats.get('genuine_percentage', 0),
-            'flagged_rate': stats.get('flagged_percentage', 0),
-            'quality_trend': 'Stable' if stats.get('genuine_percentage', 50) > 40 else 'Concerning'
-        },
-        'recommendations': [],
-        'alerts': []
-    }
-    
-    # Generate recommendations based on data
-    if stats['total_processed'] == 0:
-        insights['recommendations'].append('Start analyzing reviews to build insights')
-    elif stats.get('genuine_percentage', 50) < 30:
-        insights['recommendations'].append('High number of flagged reviews detected - consider reviewing filtering criteria')
-        insights['alerts'].append('High flag rate detected')
-    elif stats.get('genuine_percentage', 50) > 90:
-        insights['recommendations'].append('Most reviews appear genuine - system is working well')
-    
-    if not guardian.predictor:
-        insights['alerts'].append('Running in demo mode - load trained models for accurate predictions')
-    
-    return jsonify(insights)
 
 @app.route('/api/export/<format>')
 def api_export(format):
