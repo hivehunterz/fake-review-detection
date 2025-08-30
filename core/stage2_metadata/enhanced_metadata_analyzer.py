@@ -19,23 +19,7 @@ import seaborn as sns
 import sys
 sys.path.append('../stage_1_bart_finetuning')
 
-# Try to import         # Add BART summary if BART features are available
-        if 'bart_classification' in self.df.columns:
-            bart_counts = self.df['bart_classification'].value_counts()
-            bart_summary = {
-                'classification_distribution': bart_counts.to_dict(),
-            }
-            
-            # Add confidence metrics if available
-            if 'bart_confidence' in self.df.columns:
-                bart_summary['avg_confidence'] = float(self.df['bart_confidence'].mean())
-            
-            # Add quality risk metrics if available
-            if 'bart_low_quality_risk' in self.df.columns:
-                bart_summary['avg_quality_risk'] = float(self.df['bart_low_quality_risk'].mean())
-                bart_summary['high_risk_reviews'] = int((self.df['bart_low_quality_risk'] > 0.7).sum())
-            
-            report['bart_summary'] = bart_summaryl evaluation - handle import gracefully
+# Try to import BART model evaluation - handle import gracefully
 try:
     from comprehensive_model_evaluation import ComprehensiveModelEvaluator
     BART_AVAILABLE = True
