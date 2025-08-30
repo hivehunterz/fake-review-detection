@@ -51,6 +51,12 @@ python scripts/evaluation/universal_review_tester.py --input your_file.csv --tex
 **Content**: Genuine positive/negative, spam, fake enthusiastic, technical reviews
 **Usage**: Already tested - check `demo_results/` for complete analysis
 
+### 📝 Test Your Own Data
+**Template File**: `input_template.csv`
+**Guide**: See `HOW_TO_TEST_YOUR_DATA.md` for detailed instructions
+**Usage**: Replace template content with your reviews and run analysis
+**Supported Format**: CSV with text column (rating, business_name, category optional)
+
 ### 📊 Binary Evaluation System (76.9% Accuracy)
 **File**: `scripts/evaluation/binary_evaluation.py`
 **Purpose**: Evaluate genuine vs non-genuine classification performance
@@ -102,10 +108,13 @@ python scripts/training/train_all_models.py
 
 ### Predict Review Quality
 ```bash
-# Batch prediction
-python scripts/prediction/predict_review_quality.py --input data/data_all_test.csv --output results.csv
+# Test with demo data
+python scripts/evaluation/universal_review_tester.py --input demo_reviews.csv --text_column text --output demo_results
 
-# Single review
+# Test with your own data
+python scripts/evaluation/universal_review_tester.py --input your_file.csv --text_column text --output your_results
+
+# Single review test
 python scripts/prediction/predict_review_quality.py --text "Amazing food and excellent service!"
 
 # Quick demo
