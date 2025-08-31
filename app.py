@@ -532,6 +532,11 @@ def policy_page():
     """Policy violation dashboard page"""
     return render_template('policy.html')
 
+@app.route('/demo')
+def demo_page():
+    """Demo results page showing hardcoded batch analysis results"""
+    return render_template('demo.html')
+
 @app.route('/api/predict', methods=['POST'])
 def api_predict():
     """API endpoint for single review prediction"""
@@ -574,7 +579,15 @@ def api_batch():
         except Exception as e:
             return jsonify({'error': f'File parsing error: {str(e)}'}), 400
         
-        # Return hardcoded demo results
+        # For demo files, redirect to the demo page
+        if file.filename == 'demo_reviews.csv':
+            return jsonify({
+                'success': True,
+                'redirect': '/demo',
+                'message': 'Demo file detected - redirecting to demo results page'
+            })
+        
+        # Return hardcoded demo results for other files
         demo_results = get_hardcoded_demo_results()
         
         # Add processing metadata

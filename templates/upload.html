@@ -358,6 +358,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.error) {
                 throw new Error(data.error);
             }
+            // Check for redirect (demo file)
+            if (data.redirect) {
+                alert(data.message || 'Redirecting to demo results...');
+                window.location.href = data.redirect;
+                return;
+            }
             processedResults = data.results;
             showResults(data);
         })
