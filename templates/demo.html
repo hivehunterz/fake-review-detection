@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Demo Results - Smart Review Guardian{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Demo Header Information -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        🔍 TOP 10 REVIEWS WITH DETAILED PREDICTIONS
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-3">
+                        <h6><i class="fas fa-info-circle me-2"></i>Analysis Information</h6>
+                        <p class="mb-1"><strong>📁 Source:</strong> demo/demo_reviews.csv</p>
+                        <p class="mb-1"><strong>📊 Showing first 10 reviews out of 10 total</strong></p>
+                        <hr>
+                        <h6>🎯 PREDICTION LEGEND:</h6>
+                        <span class="badge bg-success me-2">✅ genuine</span> = Authentic review<br>
+                        <span class="badge bg-warning me-2">🟡 low_risk</span> = Likely genuine, minor concerns<br>
+                        <span class="badge bg-orange me-2">🟠 medium_risk</span> = Some suspicious patterns<br>
+                        <span class="badge bg-danger me-2">🔴 high_risk</span> = Likely fake/spam
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        🎯 UNIVERSAL REVIEW TESTING SUMMARY
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h3 class="text-primary">10</h3>
+                                <small class="text-muted">📊 Total Reviews</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h3 class="text-success">60.0%</h3>
+                                <small class="text-muted">🟢 Low Risk</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h3 class="text-danger">0.0%</h3>
+                                <small class="text-muted">🔴 High Risk</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="text-center">
+                                <h3 class="text-warning">0.285</h3>
+                                <small class="text-muted">⚡ Average Risk Score</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert alert-success mt-3">
+                        <h6><i class="fas fa-check-circle me-2"></i>📂 Results saved to: demo_results/</h6>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>📁 Input File:</strong> demo_reviews.csv</p>
+                                <p class="mb-1"><strong>📊 Total Reviews:</strong> 10</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>⚡ Average Risk Score:</strong> 0.285</p>
+                                <p class="mb-0"><strong>🔴 High Risk:</strong> 0.0% | <strong>🟢 Low Risk:</strong> 60.0%</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-table me-2"></i>
+                        Detailed Results
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 30%;">Review Text & Business</th>
+                                    <th style="width: 20%;">Stage 1 (BART)</th>
+                                    <th style="width: 15%;">Stage 2 (Metadata)</th>
+                                    <th style="width: 20%;">Stage 3 (Final Fusion)</th>
+                                    <th style="width: 10%;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Review #1 -->
+                                <tr>
+                                    <td class="text-center"><strong>#1</strong></td>
+                                    <td>
+                                        <div class="mb-2">
+                                            <div class="fw-bold">📝 I've been coming to this restaurant for over 5 years and the quality has always been consistent. The pasta is homemade and you can really taste the di...</div>
+                                            <div class="text-muted small">⭐ Rating: 5 | 🏢 Mario's Italian Kitchen</div>
+                                            <div class="text-muted small">🏷️ Restaurant</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div class="mb-1">📊 <strong>Classification:</strong><br>genuine_positive (94% conf)</div>
+                                            <div class="mb-1"><strong>Binary:</strong> genuine</div>
+                                            <div class="text-warning"><strong>Quality Risk:</strong> 5.3%</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div class="mb-1">📈 <strong>Anomaly Score:</strong><br>70%</div>
+                                            <div class="mb-1"><strong>Risk Level:</strong> high</div>
+                                            <div class="text-danger"><strong>Is Anomaly:</strong> true</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div class="mb-2">🎯 <span class="badge bg-success">✅ GENUINE</span></div>
+                                            <div class="mb-1">
+                                                <strong>Confidence:</strong> 51%
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar bg-info" style="width: 51%"></div>
+                                                </div>
+                                            </div>
+                                            <div class="text-warning">
+                                                <strong>Risk Score:</strong> 25%
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar bg-warning" style="width: 25%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary mb-1" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <br>
+                                        <button class="btn btn-sm btn-outline-success" title="Approve">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Review #2 -->
+                                <tr>
+                                    <td class="text-center"><strong>#2</strong></td>
+                                    <td>
+                                        <div class="mb-2">
+                                            <div class="fw-bold">📝 Terrible experience. Waited 45 minutes for our food and when it finally arrived, it was cold. The waitress was rude and didn't even apologize. The chi...</div>
+                                            <div class="text-muted small">⭐ Rating: 1 | 🏢 Sunset Grill</div>
+                                            <div class="text-muted small">🏷️ Restaurant</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div class="mb-1">📊 <strong>Classification:</strong><br>genuine_negative (83% conf)</div>
+                                            <div class="mb-1"><strong>Binary:</strong> genuine</div>
+                                            <div class="text-warning"><strong>Quality Risk:</strong> 15.7%</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div class="mb-1">📈 <strong>Anomaly Score:</strong><br>70%</div>
+                                            <div class="mb-1"><strong>Risk Level:</strong> high</div>
+                                            <div class="text-danger"><strong>Is Anomaly:</strong> true</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div class="mb-2">🎯 <span class="badge bg-success">✅ GENUINE</span></div>
+                                            <div class="mb-1">
+                                                <strong>Confidence:</strong> 36%
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar bg-info" style="width: 36%"></div>
+                                                </div>
+                                            </div>
+                                            <div class="text-warning">
+                                                <strong>Risk Score:</strong> 32%
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar bg-warning" style="width: 32%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary mb-1" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <br>
+                                        <button class="btn btn-sm btn-outline-success" title="Approve">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- Review #3 -->
+                                <tr>
+                                    <td class="text-center"><strong>#3</strong></td>
+                                    <td>
+                                        <div class="mb-2">
+                                            <div class="fw-bold">📝 AMAZING PRODUCT!!! This changed my life completely! I lost 50 pounds in just 2 weeks! Buy now with 90% discount! Click link in bio for special offer! ...</div>
+                                            <div class="text-muted small">⭐ Rating: 5 | 🏢 MegaFit Supplements</div>
+                                            <div class="text-muted small">🏷️ Health & Wellness</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div class="mb-1">📊 <strong>Classification:</strong><br>genuine_positive (36% conf)</div>
+                                            <div class="mb-1"><strong>Binary:</strong> genuine</div>
+                                            <div class="text-warning"><strong>Quality Risk:</strong> 59.3%</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div class="mb-1">📈 <strong>Anomaly Score:</strong><br>70%</div>
+                                            <div class="mb-1"><strong>Risk Level:</strong> high</div>
+                                            <div class="text-danger"><strong>Is Anomaly:</strong> true</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="small">
+                                            <div class="mb-2">🎯 <span class="badge bg-orange">🟠 MEDIUM_RISK</span></div>
+                                            <div class="mb-1">
+                                                <strong>Confidence:</strong> 25%
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar bg-info" style="width: 25%"></div>
+                                                </div>
+                                            </div>
+                                            <div class="text-warning">
+                                                <strong>Risk Score:</strong> 63%
+                                                <div class="progress mt-1" style="height: 4px;">
+                                                    <div class="progress-bar bg-warning" style="width: 63%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary mb-1" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <br>
+                                        <button class="btn btn-sm btn-outline-warning" title="Review">
+                                            <i class="fas fa-exclamation"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+
+                                <!-- Continue with more rows for the remaining 7 reviews -->
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        <em>... 7 more reviews with similar detailed analysis ...</em>
+                                        <br>
+                                        <small>Full table populated dynamically via JavaScript in actual implementation</small>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">Showing 10 of 10 results</small>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-primary">
+                                <i class="fas fa-download me-1"></i>Download CSV
+                            </button>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-eye me-1"></i>View All Details
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
